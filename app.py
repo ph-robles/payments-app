@@ -4,80 +4,31 @@ from datetime import datetime, date
 import os
 from io import BytesIO
 
-# ------------------ PAGE CONFIG ------------------
+# ------------------ Page Config ------------------
 st.set_page_config(
     page_title="Payments Tracker (USD)",
     page_icon="💵",
     layout="wide"
 )
 
-# ------------------ MOBILE CSS ------------------
-mobile_css = """
-<style>
-
-/* Make everything bigger on mobile */
-@media (max-width: 768px) {
-
-    .block-container {
-        padding-left: 0.8rem !important;
-        padding-right: 0.8rem !important;
-    }
-
-    h1, h2, h3, h4 {
-        font-size: 150% !important;
-        text-align: center !important;
-    }
-
-    .stButton > button {
-        width: 100% !important;
-        padding: 1rem !important;
-        font-size: 1.2rem !important;
-        border-radius: 10px !important;
-    }
-
-    textarea, input[type=text], input[type=number] {
-        font-size: 1.2rem !important;
-    }
-
-    .metric-container div {
-        text-align: center !important;
-    }
-
-    .stDataFrame {
-        font-size: 1.1rem !important;
-    }
-
-    /* Makes charts not overflow screen */
-    .stPlotlyChart, .stAltairChart, .stPyplotChart {
-        width: 100% !important;
-    }
-
-}
-</style>
-"""
-
-st.markdown(mobile_css, unsafe_allow_html=True)
-
-# ------------------ HEADER ------------------
+# ------------------ Header ------------------
 st.markdown("""
-<div style="padding: 20px; border-radius: 12px; 
-background: linear-gradient(90deg, #4CAF50, #81C784);
-margin-bottom: 15px;">
-    <h1 style="color:white; text-align:center; margin:0;">💵 Payments Dashboard</h1>
-    <p style="color:white; text-align:center; margin:0;">Mobile‑first version — optimized for smartphones</p>
+<div style="padding: 20px; border-radius: 10px; background: linear-gradient(90deg,#4CAF50,#66BB6A);">
+    <h1 style="color: white; text-align:center; margin:0;">💵 Payments Registry Dashboard</h1>
+    <p style="color:white; text-align:center; margin:0;">Track payments, services and clients in a modern and visual dashboard</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ------------------ CONSTANTS ------------------
+# ------------------ Constants ------------------
 EXCEL_FILE = "payments_records.xlsx"
 SHEET = "Records"
 COLUMNS = ["Timestamp", "Client", "Service", "Amount Paid (USD)"]
 
-# ------------------ UTIL FUNCTIONS ------------------
+# ------------------ Utility Functions ------------------
 @st.cache_data
 def load_data():
     if os.path.exists(EXCEL_FILE):
-        df = pd.read_excel(EXCEL_FILE, engine="openpyxl")
+        df = pd.read_excel(EXCEL_FILE, sheet_name=SHEET, engine="openpyxl")
         df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
         df["Amount Paid (USD)"] = pd.to_numeric(df["Amount Paid (USD)"], errors="coerce")
         return df
@@ -90,104 +41,128 @@ def save_record(client, service, amount):
         "Service": service,
         "Amount Paid (USD)": float(amount),
     }])
-
+    
     if os.path.exists(EXCEL_FILE):
-        df = pd.read_excel(EXCEL_FILE)
+        df = pd.read_excel(EXCEL_FILE, sheet_name=SHEET, engine="openpyxl")
         df = pd.concat([df, new], ignore_index=True)
     else:
         df = new
-
-    df.to_excel(EXCEL_FILE, index=False)
+        
+    with pd.ExcelWriter(EXCEL_FILE, engine="openpyxl", mode="w") as writer:
+        df.to_excel(writer, sheet_name=SHEET, index=False)
 
 def usd(x):
     return f"${x:,.2f}"
 
+# ------------------ Load Data ------------------
 df = load_data()
 
-# ------------------ LAYOUT ------------------
-is_mobile = st.session_state.get("mobile_width", False)
-
-# Always use single column layout → better for phones
-container = st.container()
+# ------------------ Layout ------------------
+left, right = st.columns([1, 2])
 
 # ======================================================
-# FORM SECTION
+# LEFT - FORM (Now visual and beautiful)
 # ======================================================
-with container:
-    st.markdown("## 📝 Add Payment")
+with left:
+    
+    st.markdown("## 📝 Add New Payment")
+
+    st.markdown("""
+    <div style="padding:15px; background:#ffffff; border-radius:10px; 
+    border:1px solid #e0e0e0; box-shadow:2px 2px 8px rgba(0,0,0,0.05);">
+    """, unsafe_allow_html=True)
 
     with st.form("add_payment", clear_on_submit=True):
-        client = st.text_input("Client Name")
-        service = st.text_area("Service Description")
-        amount = st.number_input("Amount Paid (USD)", min_value=0.0, step=1.0)
-        submitted = st.form_submit_button("💾 Save Payment")
+        client = st.text_input("Client name:")
+        service = st.text_area("Service description:")
+        amount = st.number_input("Amount paid (USD):", min_value=0.0, step=1.0)
+        submit = st.form_submit_button("💾 Save Payment")
 
-    if submitted:
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    if submit:
         if not client or not service:
-            st.error("Please fill all fields.")
+            st.error("Please fill in all fields")
         else:
             save_record(client, service, amount)
             st.success("Payment saved successfully 🎉")
             st.experimental_rerun()
 
 # ======================================================
-# DASHBOARD SECTION
+# RIGHT - DASHBOARD + REPORTS (Now much more visual)
 # ======================================================
-st.markdown("## 📊 Dashboard & Reports")
+with right:
 
-if df.empty:
-    st.info("No payments yet. Add one above.")
-    st.stop()
+    st.markdown("## 📊 Dashboard & Reports")
 
-df["Date"] = df["Timestamp"].dt.date
-df["YearMonth"] = df["Timestamp"].dt.to_period("M").astype(str)
+    if df.empty:
+        st.info("No records yet. Add a payment to begin.")
+        st.stop()
 
-# Filters
-with st.container():
-    st.markdown("### 🔎 Filters")
+    df["Date"] = pd.to_datetime(df["Timestamp"]).dt.date
+    df["YearMonth"] = pd.to_datetime(df["Timestamp"]).dt.to_period("M").astype(str)
 
-    f1, f2 = st.columns(2)
+    # Filters box
+    st.markdown("""
+    <div style="padding:15px; background:white; border-radius:10px; border:1px solid #ddd;">
+    """, unsafe_allow_html=True)
 
-    date_range = st.date_input("Date Range", (df["Date"].min(), df["Date"].max()))
-    client_filter = st.selectbox("Filter by Client", ["All"] + df["Client"].unique().tolist())
-    service_filter = st.selectbox("Filter by Service", ["All"] + df["Service"].unique().tolist())
+    f1, f2, f3 = st.columns(3)
 
-mask = (df["Date"] >= date_range[0]) & (df["Date"] <= date_range[1])
-if client_filter != "All":
-    mask &= df["Client"] == client_filter
-if service_filter != "All":
-    mask &= df["Service"] == service_filter
+    min_date = df["Date"].min()
+    max_date = df["Date"].max()
 
-filtered = df[mask]
+    with f1:
+        date_range = st.date_input("📅 Date range:", (min_date, max_date))
+    with f2:
+        client_filter = st.selectbox("👤 Filter by client:", ["All"] + df["Client"].unique().tolist())
+    with f3:
+        service_filter = st.selectbox("🛠 Filter by service:", ["All"] + df["Service"].unique().tolist())
 
-# KPI Cards
-st.markdown("### 📌 Key Metrics")
+    st.markdown("</div>", unsafe_allow_html=True)
 
-k1, k2, k3 = st.columns(3)
+    # Mask
+    mask = (df["Date"] >= date_range[0]) & (df["Date"] <= date_range[1])
+    if client_filter != "All":
+        mask &= df["Client"] == client_filter
+    if service_filter != "All":
+        mask &= df["Service"] == service_filter
 
-k1.metric("Total (USD)", usd(filtered["Amount Paid (USD)"].sum()))
-k2.metric("Records", len(filtered))
+    filtered = df[mask]
 
-avg = filtered["Amount Paid (USD)"].mean() if len(filtered) else 0
-k3.metric("Avg Ticket", usd(avg))
+    # KPI CARDS
+    st.markdown("### 📌 Key Metrics")
 
-# Table
-st.markdown("### 📄 Records")
-st.dataframe(filtered, use_container_width=True)
+    k1, k2, k3, k4 = st.columns(4)
 
-# Charts
-st.markdown("### 📈 Charts")
+    k1.metric("Total (USD)", usd(filtered["Amount Paid (USD)"].sum()))
+    k2.metric("Records", len(filtered))
+    k3.metric("Average Ticket", usd(filtered["Amount Paid (USD)"].mean() if len(filtered) > 0 else 0))
 
-c1, c2 = st.columns(2)
+    today = date.today()
+    current_ym = f"{today.year}-{today.month:02d}"
+    month_total = df[df["YearMonth"] == current_ym]["Amount Paid (USD)"].sum()
 
-with c1:
-    st.markdown("#### Total by Client")
-    st.bar_chart(filtered.groupby("Client")["Amount Paid (USD)"].sum())
+    k4.metric(f"This Month ({current_ym})", usd(month_total))
 
-with c2:
-    st.markdown("#### Total by Service")
-    st.bar_chart(filtered.groupby("Service")["Amount Paid (USD)"].sum())
+    # TABLE
+    st.markdown("### 📄 Filtered Records")
+    st.dataframe(filtered, use_container_width=True)
 
-st.markdown("#### Monthly Summary")
-st.line_chart(df.groupby("YearMonth")["Amount Paid (USD)"].sum())
+    # CHARTS
+    st.markdown("### 📈 Visual Charts")
+
+    chart1, chart2 = st.columns(2)
+
+    with chart1:
+        st.markdown("#### 🔹 Total by Client")
+        st.bar_chart(filtered.groupby("Client")["Amount Paid (USD)"].sum())
+
+    with chart2:
+        st.markdown("#### 🔹 Total by Service")
+        st.bar_chart(filtered.groupby("Service")["Amount Paid (USD)"].sum())
+
+    # Monthly Summary
+    st.markdown("#### 📆 Monthly Summary (USD)")
+    st.line_chart(df.groupby("YearMonth")["Amount Paid (USD)"].sum())
 
