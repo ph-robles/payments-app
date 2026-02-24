@@ -4,234 +4,190 @@ from datetime import datetime, date
 import os
 from io import BytesIO
 
-# ----------------- Page Config -----------------
-st.set_page_config(page_title="Payments Tracker (USD)", page_icon="💵", layout="wide")
-st.title("💵 Payments Registry (USD)")
-st.caption("Register Clients, Services and Payments. Generate reports by date range, month, and graphs by Client/Service.")
+# ------------------ PAGE CONFIG ------------------
+st.set_page_config(
+    page_title="Payments Tracker (USD)",
+    page_icon="💵",
+    layout="wide"
+)
 
+# ------------------ MOBILE CSS ------------------
+mobile_css = """
+<style>
+
+/* Make everything bigger on mobile */
+@media (max-width: 768px) {
+
+    .block-container {
+        padding-left: 0.8rem !important;
+        padding-right: 0.8rem !important;
+    }
+
+    h1, h2, h3, h4 {
+        font-size: 150% !important;
+        text-align: center !important;
+    }
+
+    .stButton > button {
+        width: 100% !important;
+        padding: 1rem !important;
+        font-size: 1.2rem !important;
+        border-radius: 10px !important;
+    }
+
+    textarea, input[type=text], input[type=number] {
+        font-size: 1.2rem !important;
+    }
+
+    .metric-container div {
+        text-align: center !important;
+    }
+
+    .stDataFrame {
+        font-size: 1.1rem !important;
+    }
+
+    /* Makes charts not overflow screen */
+    .stPlotlyChart, .stAltairChart, .stPyplotChart {
+        width: 100% !important;
+    }
+
+}
+</style>
+"""
+
+st.markdown(mobile_css, unsafe_allow_html=True)
+
+# ------------------ HEADER ------------------
+st.markdown("""
+<div style="padding: 20px; border-radius: 12px; 
+background: linear-gradient(90deg, #4CAF50, #81C784);
+margin-bottom: 15px;">
+    <h1 style="color:white; text-align:center; margin:0;">💵 Payments Dashboard</h1>
+    <p style="color:white; text-align:center; margin:0;">Mobile‑first version — optimized for smartphones</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ------------------ CONSTANTS ------------------
 EXCEL_FILE = "payments_records.xlsx"
 SHEET = "Records"
-
 COLUMNS = ["Timestamp", "Client", "Service", "Amount Paid (USD)"]
 
-# ----------------- Utility Functions -----------------
+# ------------------ UTIL FUNCTIONS ------------------
 @st.cache_data
-def load_data(path=EXCEL_FILE, sheet=SHEET) -> pd.DataFrame:
-    """Load data from Excel or return empty DataFrame."""
-    if os.path.exists(path):
-        try:
-            df = pd.read_excel(path, sheet_name=sheet, engine="openpyxl")
-            for col in COLUMNS:
-                if col not in df.columns:
-                    df[col] = None
-            df = df[COLUMNS].copy()
-            df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
-            df["Amount Paid (USD)"] = pd.to_numeric(df["Amount Paid (USD)"], errors="coerce")
-            return df
-        except Exception as e:
-            st.warning(f"Unable to read existing Excel file ({e}). A new one will be created when saving.")
+def load_data():
+    if os.path.exists(EXCEL_FILE):
+        df = pd.read_excel(EXCEL_FILE, engine="openpyxl")
+        df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
+        df["Amount Paid (USD)"] = pd.to_numeric(df["Amount Paid (USD)"], errors="coerce")
+        return df
     return pd.DataFrame(columns=COLUMNS)
 
-def save_record(client: str, service: str, amount: float, path=EXCEL_FILE, sheet=SHEET):
-    """Append a new record to the Excel file."""
+def save_record(client, service, amount):
     new = pd.DataFrame([{
-        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Client": client.strip(),
-        "Service": service.strip(),
-        "Amount Paid (USD)": float(amount)
+        "Timestamp": datetime.now(),
+        "Client": client,
+        "Service": service,
+        "Amount Paid (USD)": float(amount),
     }])
 
-    if os.path.exists(path):
-        try:
-            existing = pd.read_excel(path, sheet_name=sheet, engine="openpyxl")
-            df_final = pd.concat([existing, new], ignore_index=True)
-        except Exception:
-            df_final = new.copy()
+    if os.path.exists(EXCEL_FILE):
+        df = pd.read_excel(EXCEL_FILE)
+        df = pd.concat([df, new], ignore_index=True)
     else:
-        df_final = new.copy()
+        df = new
 
-    with pd.ExcelWriter(path, engine="openpyxl", mode="w") as writer:
-        df_final.to_excel(writer, sheet_name=sheet, index=False)
+    df.to_excel(EXCEL_FILE, index=False)
 
-    return df_final
+def usd(x):
+    return f"${x:,.2f}"
 
-def usd_format(x):
-    """Return formatted USD value."""
-    try:
-        return f"${x:,.2f}"
-    except:
-        return "-"
+df = load_data()
 
-def df_to_excel_bytes(df: pd.DataFrame) -> bytes:
-    """Convert a DataFrame to Excel bytes for download."""
-    buffer = BytesIO()
-    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Filtered")
-    buffer.seek(0)
-    return buffer.getvalue()
+# ------------------ LAYOUT ------------------
+is_mobile = st.session_state.get("mobile_width", False)
 
-# ----------------- Layout -----------------
-left, right = st.columns([1, 2], gap="large")
+# Always use single column layout → better for phones
+container = st.container()
 
-# ----------------- Registration Form -----------------
-with left:
-    st.subheader("New Payment Entry")
+# ======================================================
+# FORM SECTION
+# ======================================================
+with container:
+    st.markdown("## 📝 Add Payment")
 
-    with st.form("form_entry", clear_on_submit=True):
-        client = st.text_input("Client*", placeholder="Ex: Maria Smith")
-        service = st.text_area("Service Provided*", placeholder="Ex: Preventive maintenance at site XYZ")
-        amount = st.number_input("Amount Paid (USD)*", min_value=0.0, step=1.0, format="%.2f")
-
-        submitted = st.form_submit_button("Save Record ✅")
+    with st.form("add_payment", clear_on_submit=True):
+        client = st.text_input("Client Name")
+        service = st.text_area("Service Description")
+        amount = st.number_input("Amount Paid (USD)", min_value=0.0, step=1.0)
+        submitted = st.form_submit_button("💾 Save Payment")
 
     if submitted:
-        errors = []
-        if not client.strip():
-            errors.append("Please enter the client's name.")
-        if not service.strip():
-            errors.append("Please describe the service.")
-        if amount is None or amount < 0:
-            errors.append("Amount must be zero or greater.")
-
-        if errors:
-            for e in errors:
-                st.error(e)
+        if not client or not service:
+            st.error("Please fill all fields.")
         else:
             save_record(client, service, amount)
-            st.success("Record saved successfully! 🎉")
-            load_data.clear()
-            st.rerun()
+            st.success("Payment saved successfully 🎉")
+            st.experimental_rerun()
 
-# ----------------- Reports -----------------
-with right:
-    st.subheader("Reports & Filters")
+# ======================================================
+# DASHBOARD SECTION
+# ======================================================
+st.markdown("## 📊 Dashboard & Reports")
 
-    df = load_data()
+if df.empty:
+    st.info("No payments yet. Add one above.")
+    st.stop()
 
-    if df.empty:
-        st.info("No records yet. Use the form on the left to add entries.")
-    else:
-        df["Date"] = pd.to_datetime(df["Timestamp"], errors="coerce").dt.date
-        df["YearMonth"] = pd.to_datetime(df["Timestamp"], errors="coerce").dt.to_period("M").astype(str)
+df["Date"] = df["Timestamp"].dt.date
+df["YearMonth"] = df["Timestamp"].dt.to_period("M").astype(str)
 
-        # -------- Filters --------
-        f1, f2, f3 = st.columns([1.2, 1, 1])
+# Filters
+with st.container():
+    st.markdown("### 🔎 Filters")
 
-        min_date = df["Date"].min()
-        max_date = df["Date"].max()
+    f1, f2 = st.columns(2)
 
-        with f1:
-            start_date, end_date = st.date_input(
-                "Date Range",
-                value=(min_date, max_date),
-                min_value=min_date,
-                max_value=max_date
-            )
+    date_range = st.date_input("Date Range", (df["Date"].min(), df["Date"].max()))
+    client_filter = st.selectbox("Filter by Client", ["All"] + df["Client"].unique().tolist())
+    service_filter = st.selectbox("Filter by Service", ["All"] + df["Service"].unique().tolist())
 
-        with f2:
-            clients_unique = sorted(df["Client"].dropna().unique().tolist())
-            selected_clients = st.multiselect("Client (optional)", options=clients_unique, default=[])
+mask = (df["Date"] >= date_range[0]) & (df["Date"] <= date_range[1])
+if client_filter != "All":
+    mask &= df["Client"] == client_filter
+if service_filter != "All":
+    mask &= df["Service"] == service_filter
 
-        with f3:
-            services_unique = sorted(df["Service"].dropna().unique().tolist())
-            selected_services = st.multiselect("Service (optional)", options=services_unique, default=[])
+filtered = df[mask]
 
-        # Apply filters
-        mask = (df["Date"] >= start_date) & (df["Date"] <= end_date)
-        if selected_clients:
-            mask &= df["Client"].isin(selected_clients)
-        if selected_services:
-            mask &= df["Service"].isin(selected_services)
+# KPI Cards
+st.markdown("### 📌 Key Metrics")
 
-        df_filtered = df.loc[mask].copy()
+k1, k2, k3 = st.columns(3)
 
-        # -------- KPIs --------
-        k1, k2, k3, k4 = st.columns(4)
-        total_period = df_filtered["Amount Paid (USD)"].sum()
-        count_records = len(df_filtered)
-        avg_ticket = df_filtered["Amount Paid (USD)"].mean() if count_records > 0 else 0.0
+k1.metric("Total (USD)", usd(filtered["Amount Paid (USD)"].sum()))
+k2.metric("Records", len(filtered))
 
-        # Current month total
-        today = date.today()
-        ym_current = f"{today.year}-{today.month:02d}"
-        total_this_month = df.loc[df["YearMonth"] == ym_current, "Amount Paid (USD)"].sum()
+avg = filtered["Amount Paid (USD)"].mean() if len(filtered) else 0
+k3.metric("Avg Ticket", usd(avg))
 
-        k1.metric("Total in Period (USD)", usd_format(total_period))
-        k2.metric("Records in Period", f"{count_records}")
-        k3.metric("Average Ticket (USD)", usd_format(avg_ticket))
-        k4.metric(f"Total This Month ({ym_current})", usd_format(total_this_month))
+# Table
+st.markdown("### 📄 Records")
+st.dataframe(filtered, use_container_width=True)
 
-        st.divider()
+# Charts
+st.markdown("### 📈 Charts")
 
-        # -------- Filtered Table --------
-        st.markdown("### 📄 Filtered Records")
-        table = df_filtered[COLUMNS].copy()
-        table["Amount Paid (USD)"] = table["Amount Paid (USD)"].apply(usd_format)
+c1, c2 = st.columns(2)
 
-        st.dataframe(table, use_container_width=True, hide_index=True)
+with c1:
+    st.markdown("#### Total by Client")
+    st.bar_chart(filtered.groupby("Client")["Amount Paid (USD)"].sum())
 
-        # -------- Downloads --------
-        dl1, dl2 = st.columns(2)
+with c2:
+    st.markdown("#### Total by Service")
+    st.bar_chart(filtered.groupby("Service")["Amount Paid (USD)"].sum())
 
-        with dl1:
-            with open(EXCEL_FILE, "rb") as f:
-                st.download_button(
-                    "📥 Download Full Excel",
-                    data=f,
-                    file_name=EXCEL_FILE,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+st.markdown("#### Monthly Summary")
+st.line_chart(df.groupby("YearMonth")["Amount Paid (USD)"].sum())
 
-        with dl2:
-            filtered_bytes = df_to_excel_bytes(df_filtered[COLUMNS])
-            st.download_button(
-                "📥 Download Filtered Excel",
-                data=filtered_bytes,
-                file_name="filtered_records.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-
-        st.divider()
-
-        # -------- Charts --------
-        st.markdown("### 📊 Charts")
-
-        ch1, ch2 = st.columns(2)
-
-        with ch1:
-            st.markdown("**Total by Client (USD)**")
-            grp_client = df_filtered.groupby("Client")["Amount Paid (USD)"].sum().sort_values(ascending=False)
-            if grp_client.empty:
-                st.info("No data available for this chart.")
-            else:
-                st.bar_chart(grp_client)
-
-        with ch2:
-            st.markdown("**Total by Service (USD)**")
-            grp_service = df_filtered.groupby("Service")["Amount Paid (USD)"].sum().sort_values(ascending=False)
-            if grp_service.empty:
-                st.info("No data available for this chart.")
-            else:
-                st.bar_chart(grp_service)
-
-        st.divider()
-
-        # -------- Monthly Summary --------
-        st.markdown("### 🗓️ Monthly Summary (USD)")
-        monthly = df.groupby("YearMonth")["Amount Paid (USD)"].sum().reset_index()
-
-        if monthly.empty:
-            st.info("Not enough data for monthly summary.")
-        else:
-            cm1, cm2 = st.columns([1, 2])
-
-            with cm1:
-                tmp = monthly.copy()
-                tmp["Total (USD)"] = tmp["Amount Paid (USD)"].apply(usd_format)
-                st.dataframe(tmp[["YearMonth", "Total (USD)"]], hide_index=True)
-
-            with cm2:
-                monthly_chart = monthly.set_index("YearMonth")["Amount Paid (USD)"]
-                st.line_chart(monthly_chart)
-
-st.caption("Tip: Use cloud folders (OneDrive, Google Drive, SharePoint) to automatically back up your Excel file.")
