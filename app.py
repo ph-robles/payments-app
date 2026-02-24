@@ -86,7 +86,7 @@ with left:
         else:
             save_record(client, service, amount)
             st.success("Payment saved successfully 🎉")
-            st.experimental_rerun()
+            st.rerun()
 
 # ======================================================
 # RIGHT - DASHBOARD + REPORTS (Now much more visual)
@@ -165,4 +165,5 @@ with right:
     # Monthly Summary
     st.markdown("#### 📆 Monthly Summary (USD)")
     st.line_chart(df.groupby("YearMonth")["Amount Paid (USD)"].sum())
+
 
