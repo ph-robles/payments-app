@@ -4,248 +4,234 @@ from datetime import datetime, date
 import os
 from io import BytesIO
 
-# ----------------- Configuração da página -----------------
+# ----------------- Page Config -----------------
 st.set_page_config(page_title="Payments Tracker (USD)", page_icon="💵", layout="wide")
-st.title("💵 Registro de Pagamentos (USD)")
-st.caption("Registre Cliente, Serviço e Valor (USD). Gere relatórios por período, mês e gráficos por Cliente/Serviço.")
+st.title("💵 Payments Registry (USD)")
+st.caption("Register Clients, Services and Payments. Generate reports by date range, month, and graphs by Client/Service.")
 
-ARQUIVO_EXCEL = "payments_records.xlsx"
-ABA = "Records"
+EXCEL_FILE = "payments_records.xlsx"
+SHEET = "Records"
 
-COLUNAS_PADRAO = ["Data/Hora", "Cliente", "Serviço", "Valor Pago (USD)"]
+COLUMNS = ["Timestamp", "Client", "Service", "Amount Paid (USD)"]
 
-# ----------------- Funções utilitárias -----------------
+# ----------------- Utility Functions -----------------
 @st.cache_data
-def carregar_dados(caminho=ARQUIVO_EXCEL, aba=ABA) -> pd.DataFrame:
-    """Carrega os dados do Excel (ou retorna DataFrame vazio com colunas padrão)."""
-    if os.path.exists(caminho):
+def load_data(path=EXCEL_FILE, sheet=SHEET) -> pd.DataFrame:
+    """Load data from Excel or return empty DataFrame."""
+    if os.path.exists(path):
         try:
-            df = pd.read_excel(caminho, sheet_name=aba, engine="openpyxl")
-            for c in COLUNAS_PADRAO:
-                if c not in df.columns:
-                    df[c] = None
-            df = df[COLUNAS_PADRAO].copy()
-            # Normaliza tipos
-            df["Data/Hora"] = pd.to_datetime(df["Data/Hora"], errors="coerce")
-            df["Valor Pago (USD)"] = pd.to_numeric(df["Valor Pago (USD)"], errors="coerce")
+            df = pd.read_excel(path, sheet_name=sheet, engine="openpyxl")
+            for col in COLUMNS:
+                if col not in df.columns:
+                    df[col] = None
+            df = df[COLUMNS].copy()
+            df["Timestamp"] = pd.to_datetime(df["Timestamp"], errors="coerce")
+            df["Amount Paid (USD)"] = pd.to_numeric(df["Amount Paid (USD)"], errors="coerce")
             return df
         except Exception as e:
-            st.warning(f"Não foi possível ler o Excel existente ({e}). Um novo será criado ao salvar.")
-    return pd.DataFrame(columns=COLUNAS_PADRAO)
+            st.warning(f"Unable to read existing Excel file ({e}). A new one will be created when saving.")
+    return pd.DataFrame(columns=COLUMNS)
 
-def salvar_registro(cliente: str, servico: str, valor: float, caminho=ARQUIVO_EXCEL, aba=ABA):
-    """Anexa um registro ao Excel, criando arquivo/aba se necessário."""
-    novo = pd.DataFrame([{
-        "Data/Hora": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "Cliente": cliente.strip(),
-        "Serviço": servico.strip(),
-        "Valor Pago (USD)": float(valor)
+def save_record(client: str, service: str, amount: float, path=EXCEL_FILE, sheet=SHEET):
+    """Append a new record to the Excel file."""
+    new = pd.DataFrame([{
+        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "Client": client.strip(),
+        "Service": service.strip(),
+        "Amount Paid (USD)": float(amount)
     }])
 
-    if os.path.exists(caminho):
+    if os.path.exists(path):
         try:
-            existente = pd.read_excel(caminho, sheet_name=aba, engine="openpyxl")
-            df_final = pd.concat([existente, novo], ignore_index=True)
+            existing = pd.read_excel(path, sheet_name=sheet, engine="openpyxl")
+            df_final = pd.concat([existing, new], ignore_index=True)
         except Exception:
-            df_final = novo.copy()
+            df_final = new.copy()
     else:
-        df_final = novo.copy()
+        df_final = new.copy()
 
-    with pd.ExcelWriter(caminho, engine="openpyxl", mode="w") as writer:
-        df_final.to_excel(writer, sheet_name=aba, index=False)
+    with pd.ExcelWriter(path, engine="openpyxl", mode="w") as writer:
+        df_final.to_excel(writer, sheet_name=sheet, index=False)
 
     return df_final
 
-def fmt_usd(x):
-    """Formata número em USD: $1,234.56. Retorna '-' se inválido."""
+def usd_format(x):
+    """Return formatted USD value."""
     try:
         return f"${x:,.2f}"
-    except Exception:
+    except:
         return "-"
 
-def to_excel_bytes(df: pd.DataFrame) -> bytes:
-    """Converte um DataFrame em bytes de Excel (xlsx) para download."""
+def df_to_excel_bytes(df: pd.DataFrame) -> bytes:
+    """Convert a DataFrame to Excel bytes for download."""
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Filtered")
     buffer.seek(0)
     return buffer.getvalue()
 
-# ----------------- Colunas / Layout -----------------
-col_form, col_relatorios = st.columns([1, 2], gap="large")
+# ----------------- Layout -----------------
+left, right = st.columns([1, 2], gap="large")
 
-# ----------------- Formulário (Cadastro) -----------------
-with col_form:
-    st.subheader("Cadastrar novo pagamento")
-    with st.form("form_registro", clear_on_submit=True):
-        cliente = st.text_input("Cliente*", placeholder="Ex.: Maria Silva")
-        servico = st.text_area("Serviço realizado*", placeholder="Ex.: Manutenção preventiva no site XYZ")
-        valor = st.number_input("Valor pago (USD)*", min_value=0.0, step=1.0, format="%.2f", help="Informe em dólares americanos (USD).")
-        enviado = st.form_submit_button("Salvar registro ✅")
+# ----------------- Registration Form -----------------
+with left:
+    st.subheader("New Payment Entry")
 
-    if enviado:
-        erros = []
-        if not cliente.strip():
-            erros.append("Informe o **nome do cliente**.")
-        if not servico.strip():
-            erros.append("Descreva o **serviço realizado**.")
-        if valor is None or valor < 0:
-            erros.append("O **valor** precisa ser zero ou positivo.")
+    with st.form("form_entry", clear_on_submit=True):
+        client = st.text_input("Client*", placeholder="Ex: Maria Smith")
+        service = st.text_area("Service Provided*", placeholder="Ex: Preventive maintenance at site XYZ")
+        amount = st.number_input("Amount Paid (USD)*", min_value=0.0, step=1.0, format="%.2f")
 
-        if erros:
-            for e in erros:
+        submitted = st.form_submit_button("Save Record ✅")
+
+    if submitted:
+        errors = []
+        if not client.strip():
+            errors.append("Please enter the client's name.")
+        if not service.strip():
+            errors.append("Please describe the service.")
+        if amount is None or amount < 0:
+            errors.append("Amount must be zero or greater.")
+
+        if errors:
+            for e in errors:
                 st.error(e)
         else:
-            salvar_registro(cliente, servico, valor)
-            st.success("Registro salvo com sucesso! 🎉")
-            carregar_dados.clear()
+            save_record(client, service, amount)
+            st.success("Record saved successfully! 🎉")
+            load_data.clear()
             st.rerun()
 
-# ----------------- Dados / Relatórios -----------------
-with col_relatorios:
-    st.subheader("Relatórios e Filtros")
+# ----------------- Reports -----------------
+with right:
+    st.subheader("Reports & Filters")
 
-    df = carregar_dados()
+    df = load_data()
+
     if df.empty:
-        st.info("Nenhum registro ainda. Use o formulário ao lado para começar.")
+        st.info("No records yet. Use the form on the left to add entries.")
     else:
-        # Preparação de campos auxiliares
-        df["Data"] = pd.to_datetime(df["Data/Hora"], errors="coerce").dt.date
-        df["AnoMes"] = pd.to_datetime(df["Data/Hora"], errors="coerce").dt.to_period("M").astype(str)
+        df["Date"] = pd.to_datetime(df["Timestamp"], errors="coerce").dt.date
+        df["YearMonth"] = pd.to_datetime(df["Timestamp"], errors="coerce").dt.to_period("M").astype(str)
 
-        # ----- Filtros (sidebar local) -----
+        # -------- Filters --------
         f1, f2, f3 = st.columns([1.2, 1, 1])
 
-        # Período padrão: do primeiro registro ao último
-        min_data = df["Data"].min() or date.today()
-        max_data = df["Data"].max() or date.today()
+        min_date = df["Date"].min()
+        max_date = df["Date"].max()
 
         with f1:
-            data_inicial, data_final = st.date_input(
-                "Período",
-                value=(min_data, max_data),
-                min_value=min_data,
-                max_value=max_data
+            start_date, end_date = st.date_input(
+                "Date Range",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date
             )
 
-        # Filtros opcionais por Cliente/Serviço
         with f2:
-            clientes_unicos = sorted([c for c in df["Cliente"].dropna().unique()])
-            clientes_sel = st.multiselect("Cliente (opcional)", options=clientes_unicos, default=[])
+            clients_unique = sorted(df["Client"].dropna().unique().tolist())
+            selected_clients = st.multiselect("Client (optional)", options=clients_unique, default=[])
 
         with f3:
-            servicos_unicos = sorted([s for s in df["Serviço"].dropna().unique()])
-            servicos_sel = st.multiselect("Serviço (opcional)", options=servicos_unicos, default=[])
+            services_unique = sorted(df["Service"].dropna().unique().tolist())
+            selected_services = st.multiselect("Service (optional)", options=services_unique, default=[])
 
-        # Aplica filtros
-        mask = (df["Data"] >= data_inicial) & (df["Data"] <= data_final)
-        if clientes_sel:
-            mask &= df["Cliente"].isin(clientes_sel)
-        if servicos_sel:
-            mask &= df["Serviço"].isin(servicos_sel)
+        # Apply filters
+        mask = (df["Date"] >= start_date) & (df["Date"] <= end_date)
+        if selected_clients:
+            mask &= df["Client"].isin(selected_clients)
+        if selected_services:
+            mask &= df["Service"].isin(selected_services)
 
-        df_filtrado = df.loc[mask].copy()
+        df_filtered = df.loc[mask].copy()
 
-        # ----- KPIs -----
-        c1, c2, c3, c4 = st.columns(4)
-        total_periodo = df_filtrado["Valor Pago (USD)"].sum(skipna=True)
-        qtd_registros = len(df_filtrado)
-        media_registro = df_filtrado["Valor Pago (USD)"].mean(skipna=True) if qtd_registros > 0 else 0.0
+        # -------- KPIs --------
+        k1, k2, k3, k4 = st.columns(4)
+        total_period = df_filtered["Amount Paid (USD)"].sum()
+        count_records = len(df_filtered)
+        avg_ticket = df_filtered["Amount Paid (USD)"].mean() if count_records > 0 else 0.0
 
-        # Total do mês atual (independente do filtro de período)
-        hoje = date.today()
-        ano_mes_atual = f"{hoje.year}-{hoje.month:02d}"
-        total_mes_atual = df.loc[df["AnoMes"] == ano_mes_atual, "Valor Pago (USD)"].sum(skipna=True)
+        # Current month total
+        today = date.today()
+        ym_current = f"{today.year}-{today.month:02d}"
+        total_this_month = df.loc[df["YearMonth"] == ym_current, "Amount Paid (USD)"].sum()
 
-        c1.metric("Total no período (USD)", fmt_usd(total_periodo))
-        c2.metric("Registros no período", f"{qtd_registros}")
-        c3.metric("Ticket médio (USD)", fmt_usd(media_registro))
-        c4.metric(f"Total do mês atual ({ano_mes_atual})", fmt_usd(total_mes_atual))
+        k1.metric("Total in Period (USD)", usd_format(total_period))
+        k2.metric("Records in Period", f"{count_records}")
+        k3.metric("Average Ticket (USD)", usd_format(avg_ticket))
+        k4.metric(f"Total This Month ({ym_current})", usd_format(total_this_month))
 
         st.divider()
 
-        # ----- Tabela filtrada -----
-        st.markdown("### 📄 Registros (filtrados)")
-        mostrar = df_filtrado[COLUNAS_PADRAO].copy()
-        # Formatar valores
-        mostrar["Valor Pago (USD)"] = mostrar["Valor Pago (USD)"].apply(lambda x: fmt_usd(x) if pd.notnull(x) else "-")
-        st.dataframe(mostrar, use_container_width=True, hide_index=True)
+        # -------- Filtered Table --------
+        st.markdown("### 📄 Filtered Records")
+        table = df_filtered[COLUMNS].copy()
+        table["Amount Paid (USD)"] = table["Amount Paid (USD)"].apply(usd_format)
 
-        # Downloads
-        col_dl1, col_dl2 = st.columns(2)
-        with col_dl1:
-            # Excel completo
-            with open(ARQUIVO_EXCEL, "rb") as f:
+        st.dataframe(table, use_container_width=True, hide_index=True)
+
+        # -------- Downloads --------
+        dl1, dl2 = st.columns(2)
+
+        with dl1:
+            with open(EXCEL_FILE, "rb") as f:
                 st.download_button(
-                    label="📥 Baixar Excel (completo)",
+                    "📥 Download Full Excel",
                     data=f,
-                    file_name=ARQUIVO_EXCEL,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
+                    file_name=EXCEL_FILE,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
-        with col_dl2:
-            # Excel filtrado
-            bytes_filtrado = to_excel_bytes(df_filtrado[COLUNAS_PADRAO])
+
+        with dl2:
+            filtered_bytes = df_to_excel_bytes(df_filtered[COLUMNS])
             st.download_button(
-                label="📥 Baixar Excel (filtrado)",
-                data=bytes_filtrado,
-                file_name="payments_filtered.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
+                "📥 Download Filtered Excel",
+                data=filtered_bytes,
+                file_name="filtered_records.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
 
         st.divider()
 
-        # ----- Gráficos: por Cliente e por Serviço -----
-        st.markdown("### 📊 Gráficos")
+        # -------- Charts --------
+        st.markdown("### 📊 Charts")
 
-        gc, gs = st.columns(2)
-        # Por Cliente
-        with gc:
-            st.markdown("**Total por Cliente (USD)**")
-            grp_cli = (df_filtrado
-                       .groupby("Cliente", dropna=True)["Valor Pago (USD)"]
-                       .sum()
-                       .sort_values(ascending=False)
-                      )
-            if grp_cli.empty:
-                st.info("Sem dados para este gráfico.")
-            else:
-                st.bar_chart(grp_cli, use_container_width=True)
+        ch1, ch2 = st.columns(2)
 
-        # Por Serviço
-        with gs:
-            st.markdown("**Total por Serviço (USD)**")
-            grp_srv = (df_filtrado
-                       .groupby("Serviço", dropna=True)["Valor Pago (USD)"]
-                       .sum()
-                       .sort_values(ascending=False)
-                      )
-            if grp_srv.empty:
-                st.info("Sem dados para este gráfico.")
+        with ch1:
+            st.markdown("**Total by Client (USD)**")
+            grp_client = df_filtered.groupby("Client")["Amount Paid (USD)"].sum().sort_values(ascending=False)
+            if grp_client.empty:
+                st.info("No data available for this chart.")
             else:
-                st.bar_chart(grp_srv, use_container_width=True)
+                st.bar_chart(grp_client)
+
+        with ch2:
+            st.markdown("**Total by Service (USD)**")
+            grp_service = df_filtered.groupby("Service")["Amount Paid (USD)"].sum().sort_values(ascending=False)
+            if grp_service.empty:
+                st.info("No data available for this chart.")
+            else:
+                st.bar_chart(grp_service)
 
         st.divider()
 
-        # ----- Resumo mensal (soma do mês) -----
-        st.markdown("### 🗓️ Resumo mensal (USD)")
-        resumo_mensal = (df
-                         .groupby("AnoMes", dropna=True)["Valor Pago (USD)"]
-                         .sum()
-                         .reset_index()
-                         .sort_values("AnoMes"))
-        if resumo_mensal.empty:
-            st.info("Ainda não há dados suficientes para o resumo mensal.")
-        else:
-            col_m1, col_m2 = st.columns([1, 2])
-            with col_m1:
-                # Mostra tabela com formatação
-                tmp = resumo_mensal.copy()
-                tmp["Total (USD)"] = tmp["Valor Pago (USD)"].apply(fmt_usd)
-                st.dataframe(tmp[["AnoMes", "Total (USD)"]], use_container_width=True, hide_index=True, height=280)
-            with col_m2:
-                chart_df = resumo_mensal.set_index("AnoMes")["Valor Pago (USD)"]
-                st.line_chart(chart_df, use_container_width=True)
+        # -------- Monthly Summary --------
+        st.markdown("### 🗓️ Monthly Summary (USD)")
+        monthly = df.groupby("YearMonth")["Amount Paid (USD)"].sum().reset_index()
 
-st.caption("Dica: salve o arquivo .xlsx numa pasta sincronizada (OneDrive/Google Drive/SharePoint) para backup automático.")
+        if monthly.empty:
+            st.info("Not enough data for monthly summary.")
+        else:
+            cm1, cm2 = st.columns([1, 2])
+
+            with cm1:
+                tmp = monthly.copy()
+                tmp["Total (USD)"] = tmp["Amount Paid (USD)"].apply(usd_format)
+                st.dataframe(tmp[["YearMonth", "Total (USD)"]], hide_index=True)
+
+            with cm2:
+                monthly_chart = monthly.set_index("YearMonth")["Amount Paid (USD)"]
+                st.line_chart(monthly_chart)
+
+st.caption("Tip: Use cloud folders (OneDrive, Google Drive, SharePoint) to automatically back up your Excel file.")
