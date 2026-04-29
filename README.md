@@ -1,192 +1,132 @@
-CREATE TABLE artigos (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  slug TEXT NOT NULL UNIQUE,
-  titulo TEXT NOT NULL,
-  descricao TEXT NOT NULL,
-  conteudo TEXT NOT NULL,
-  tag TEXT NOT NULL,
-  tag_color TEXT NOT NULL DEFAULT 'blue',
-  emoji TEXT NOT NULL DEFAULT '📡',
-  tempo TEXT NOT NULL DEFAULT '5 min',
-  autor TEXT NOT NULL DEFAULT 'Raphael Robles',
-  publicado BOOLEAN DEFAULT true,
-  criado_em TIMESTAMP DEFAULT NOW()
-);
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import Link from "next/link";
+import { BookOpen, Clock, ChevronRight, ArrowRight, Zap } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
--- Migra os 5 artigos já existentes
-INSERT INTO artigos (slug, titulo, descricao, conteudo, tag, tag_color, emoji, tempo) VALUES
-(
-  'melhor-internet-petropolis-rj-2026',
-  'Melhor internet em Petrópolis RJ 2026',
-  'Compare os melhores provedores de internet disponíveis em Petrópolis. Fibra, satélite e rádio — guia técnico atualizado.',
-  'Petrópolis é uma das cidades serranas do Rio de Janeiro com maior crescimento no acesso à internet de alta velocidade. Em 2026, moradores e empresas têm mais opções do que nunca — mas nem todas entregam o que prometem.
+async function getArtigos() {
+  const { data, error } = await supabase
+    .from("artigos")
+    .select("slug, titulo, descricao, tag, tag_color, emoji, tempo")
+    .eq("publicado", true)
+    .order("criado_em", { ascending: false });
 
-## Provedores disponíveis em Petrópolis
+  if (error || !data) return [];
+  return data;
+}
 
-### Claro Fibra
-A Claro é a operadora com maior cobertura em Petrópolis, atendendo principalmente o centro e bairros como Quitandinha, Valparaíso e Alto da Serra. Oferece planos a partir de R$99,90/mês com velocidades de até 600 Mbps.
+const tagColors: Record<string, string> = {
+  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+  purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+  green: "bg-green-500/10 text-green-400 border-green-500/20",
+  orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
+  cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+  red: "bg-red-500/10 text-red-400 border-red-500/20",
+  yellow: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+  pink: "bg-pink-500/10 text-pink-400 border-pink-500/20",
+};
 
-**Pontos positivos:** cobertura ampla, velocidade estável, instalação grátis.
-**Pontos negativos:** fidelidade de 12 meses, suporte demorado.
+export default async function GuiasPage() {
+  const artigos = await getArtigos();
 
-### Vivo Fibra
-A Vivo atende partes do centro e região do Carangola. Planos a partir de R$109,99/mês com até 500 Mbps. Melhor avaliação de satisfação entre os clientes da cidade.
+  return (
+    <>
+      <Navbar />
+      <main className="min-h-screen bg-[#1c1c24] text-white pt-24 pb-16">
 
-### Starlink
-Para quem mora em condomínios de altitude, zona rural de Petrópolis ou regiões sem cobertura de fibra — o Starlink é a melhor opção disponível. Velocidade média de 100–200 Mbps com latência de 20–40ms.
+        {/* HERO */}
+        <section className="relative px-6 py-16 border-b border-white/10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-purple-900/10 pointer-events-none" />
 
-**Custo:** R$236/mês + kit de R$999 a R$1.680.
+          <div className="max-w-6xl mx-auto relative z-10">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono px-3 py-1.5 rounded-full mb-6 uppercase tracking-widest">
+              <BookOpen className="w-3 h-3" />
+              Portal técnico independente
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+              Guias e Artigos<br />
+              <span className="text-blue-400">de Tecnologia</span>
+            </h1>
+            <p className="text-white/50 text-lg max-w-2xl">
+              Internet, redes, satélite, celulares, apps e tudo sobre tecnologia.
+              Conteúdo técnico independente — para leigos e especialistas.
+            </p>
+          </div>
+        </section>
 
-## Qual escolher em Petrópolis?
+        {/* STATS */}
+        <section className="px-6 py-8 border-b border-white/10">
+          <div className="max-w-6xl mx-auto grid grid-cols-3 gap-4">
+            {[
+              { valor: `${artigos.length}`, label: "Artigos publicados" },
+              { valor: "100%", label: "Gratuito" },
+              { valor: "2×", label: "Novos por semana" },
+            ].map((s, i) => (
+              <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                <div className="text-xl font-bold text-blue-400">{s.valor}</div>
+                <div className="text-white/40 text-xs mt-1">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-- **Centro e bairros urbanos:** Claro Fibra ou Vivo Fibra
-- **Regiões serranas e rurais:** Starlink
-- **Melhor custo-benefício:** Claro Fibra 300 Mbps
+        {/* LISTA */}
+        <section className="px-6 py-12">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-8">
+              Todos os artigos — mais recentes primeiro
+            </p>
 
-## Teste sua internet agora
+            <div className="flex flex-col gap-4">
+              {artigos.map((artigo, i) => (
+                <Link
+                  key={artigo.slug}
+                  href={`/guias/${artigo.slug}`}
+                  className="group bg-white/5 hover:bg-blue-500/5 border border-white/10 hover:border-blue-500/30 rounded-2xl p-6 transition-all flex flex-col md:flex-row md:items-center gap-4"
+                >
+                  <div className="text-4xl flex-shrink-0 hidden md:block">{artigo.emoji}</div>
 
-Antes de contratar, acesse fast.com ou speedtest.net e teste a velocidade atual. Se estiver abaixo do contratado, você tem direito a rescisão sem multa.',
-  'Cidade', 'blue', '🏙️', '5 min'
-),
-(
-  'starlink-vale-a-pena-rio-de-janeiro',
-  'Starlink vale a pena no Rio de Janeiro?',
-  'Análise técnica completa do Starlink no RJ. Velocidade real, latência, cobertura e comparativo com fibra óptica.',
-  'O Starlink chegou ao Brasil prometendo revolucionar o acesso à internet em áreas remotas. Mas vale a pena no Rio de Janeiro, onde já existe cobertura de fibra óptica em boa parte do estado?
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
+                      <span className={`text-xs px-2 py-0.5 rounded-full border ${tagColors[artigo.tag_color] ?? tagColors.blue}`}>
+                        {artigo.tag}
+                      </span>
+                      <span className="flex items-center gap-1 text-white/30 text-xs">
+                        <Clock className="w-3 h-3" />
+                        {artigo.tempo} de leitura
+                      </span>
+                    </div>
+                    <h2 className="font-bold text-lg text-white mb-1 group-hover:text-blue-400 transition">
+                      {artigo.titulo}
+                    </h2>
+                    <p className="text-white/50 text-sm leading-relaxed">
+                      {artigo.descricao}
+                    </p>
+                  </div>
 
-## O que é o Starlink?
+                  <ChevronRight className="w-5 h-5 text-white/20 group-hover:text-blue-400 transition flex-shrink-0 hidden md:block" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
 
-O Starlink é o serviço de internet via satélite de órbita baixa (LEO) da SpaceX. Diferente dos satélites convencionais que ficam a 35.000 km de altitude, os satélites Starlink orbitam a 550 km — o que reduz drasticamente a latência.
+        {/* CTA */}
+        <section className="px-6 pb-8">
+          <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-900/30 to-purple-900/20 border border-blue-500/20 rounded-2xl p-8 text-center">
+            <Zap className="text-blue-400 w-10 h-10 mx-auto mb-4" />
+            <h3 className="font-bold text-xl mb-2">Quer comparar provedores na sua cidade?</h3>
+            <p className="text-white/50 text-sm mb-6">
+              Use nossa ferramenta gratuita para ver todas as opções disponíveis no seu endereço.
+            </p>
+            <Link href="/" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-8 py-3 rounded-xl text-sm">
+              Buscar internet <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </section>
 
-## Velocidade real no RJ
-
-Nos testes realizados em diferentes regiões do Rio de Janeiro, o Starlink entrega:
-
-- **Velocidade de download:** 80–200 Mbps
-- **Velocidade de upload:** 10–20 Mbps
-- **Latência:** 20–40ms
-- **Estabilidade:** cai em chuvas fortes por 2–5 minutos
-
-## Quando o Starlink vale a pena no RJ?
-
-**Vale a pena se você:**
-- Mora em zona rural, condomínio de altitude ou área sem fibra
-- Precisa de internet em sítio, fazenda ou chácara
-- Quer backup de conexão para home office crítico
-
-**Não vale a pena se você:**
-- Mora em área urbana com fibra disponível
-- Tem orçamento limitado
-- Usa muito streaming em 4K
-
-## Veredicto técnico
-
-Como técnico de telecom que trabalha no campo, minha análise é direta: o Starlink é a melhor solução para quem não tem fibra. Para quem tem fibra disponível, só faz sentido como backup.',
-  'Satélite', 'purple', '🛰️', '7 min'
-),
-(
-  'internet-rural-interior-rj',
-  'Internet rural no interior do RJ: qual escolher em 2026',
-  'Guia completo para escolher internet no interior do Rio de Janeiro. Starlink, 4G rural e satélite comparados por um técnico de campo.',
-  'Quem mora no interior fluminense sabe a dificuldade: a fibra óptica não chega, o 4G é instável e o satélite convencional tem latência de 600ms. Em 2026, as opções melhoraram — mas ainda exigem atenção na hora de escolher.
-
-## Opções disponíveis no interior do RJ
-
-### 1. Starlink (Recomendado)
-Melhor opção para a grande maioria das cidades do interior fluminense. Cobre desde o Vale do Paraíba até o Norte Fluminense com velocidade consistente.
-
-### 2. Internet 4G Rural
-Se sua propriedade tem cobertura de sinal 4G de pelo menos 2 barras, um roteador rural com antena direcional pode entregar 20–80 Mbps por R$100–150/mês.
-
-### 3. Provedores Regionais
-Muitas cidades do interior têm provedores locais que usam rádio ou fibra própria. Geralmente mais baratos que as grandes operadoras e com suporte mais ágil.
-
-### 4. Satélite Convencional (Evite)
-Latência de 600ms+. Inviável para videochamadas, jogos e qualquer uso moderno.
-
-## Recomendação por região
-
-- **Serrana (Petrópolis, Teresópolis):** Starlink ou fibra local
-- **Norte Fluminense (Campos, Macaé):** Starlink ou 4G rural
-- **Costa Verde (Angra, Paraty):** Starlink
-
-## Dica de técnico
-
-Antes de contratar qualquer serviço de rádio ou 4G rural, peça um teste de 7 dias. Qualquer provedor sério oferece isso.',
-  'Rural', 'green', '🌿', '6 min'
-),
-(
-  'claro-vs-vivo-fibra-rj',
-  'Claro vs Vivo Fibra: qual é melhor no RJ em 2026',
-  'Comparativo técnico entre Claro Fibra e Vivo Fibra no Rio de Janeiro. Velocidade, estabilidade, preço e suporte analisados.',
-  'Claro e Vivo são as duas maiores operadoras de fibra óptica do Rio de Janeiro. Mas qual entrega mais pelo seu dinheiro em 2026?
-
-## Cobertura no RJ
-
-**Claro Fibra** tem a maior cobertura do estado, atendendo praticamente todas as cidades da Região Metropolitana, Baixada Fluminense, Serrana e parte do interior.
-
-**Vivo Fibra** tem cobertura menor, focada principalmente na capital, Niterói e algumas cidades da Região Metropolitana.
-
-**Vantagem: Claro**
-
-## Velocidade e estabilidade
-
-Nos testes realizados em campo, a Vivo apresenta velocidade mais consistente durante horários de pico (19h–22h), enquanto a Claro tende a cair mais em bairros de alta densidade.
-
-**Vantagem: Vivo**
-
-## Preço
-
-- **300 Mbps:** Claro R$89,99 vs Vivo R$99,99
-- **500 Mbps:** Claro R$99,90 vs Vivo R$109,99
-- **1 Gbps:** Claro R$129,99 vs Vivo R$139,99
-
-**Vantagem: Claro**
-
-## Veredicto final
-
-- **Escolha a Claro** se preço e cobertura são prioridade
-- **Escolha a Vivo** se estabilidade no horário de pico é essencial',
-  'Comparativo', 'orange', '⚡', '5 min'
-),
-(
-  'como-testar-velocidade-real-internet',
-  'Como testar a velocidade real da sua internet',
-  'Guia técnico para medir a velocidade real da internet. Aprenda a identificar se seu provedor está entregando o que prometeu.',
-  'Seu provedor promete 300 Mbps mas você sente a internet lenta? Aprenda a testar a velocidade real e saber se está sendo enganado.
-
-## Por que o teste de velocidade pode mentir
-
-A maioria das pessoas faz o teste errado e aceita um resultado abaixo do contratado sem questionar. Fatores que distorcem o resultado:
-
-- **Wi-Fi lento:** o gargalo pode estar no roteador, não no provedor
-- **Hora do teste:** fazer às 21h no horário de pico dá resultado diferente das 10h
-- **Servidor do teste:** alguns provedores priorizam tráfego para servidores de teste
-
-## Como fazer o teste correto
-
-### Passo 1 — Conecte no cabo
-Use um cabo de rede diretamente no roteador. Wi-Fi sempre perde velocidade.
-
-### Passo 2 — Feche tudo
-Feche todos os programas, apps e outros dispositivos conectados à rede.
-
-### Passo 3 — Use os sites certos
-- **fast.com** (Netflix) — mais difícil de o provedor trapacear
-- **speedtest.net** — o mais conhecido
-- **brasilbandalarga.com.br** — teste oficial do Anatel
-
-### Passo 4 — Teste 3 vezes em horários diferentes
-- Manhã (9h–11h), Tarde (15h–17h), Noite (20h–22h)
-
-## O que fazer se a velocidade estiver abaixo
-
-Se a média ficou abaixo de 80% do contratado, você tem direito por lei a:
-
-1. Solicitar reparo sem custo
-2. Abater proporcional na fatura
-3. Rescindir o contrato sem multa
-
-**Guarde os prints dos testes** — eles são prova para reclamação no Anatel.',
-  'Dica técnica', 'cyan', '📡', '4 min'
-);
+      </main>
+      <Footer />
+    </>
+  );
+}
