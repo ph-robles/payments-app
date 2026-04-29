@@ -2,369 +2,315 @@
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { notFound } from "next/navigation";
-import { ChevronRight, Clock, User, ArrowRight, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { use } from "react";
+import { MapPin, Zap, DollarSign, Star, ArrowRight, ChevronRight, Wifi, Satellite, Phone } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { use, useEffect, useState } from "react";
 
-const artigos: Record<string, {
-  titulo: string;
-  descricao: string;
-  tempo: string;
-  tag: string;
-  tagColor: string;
-  conteudo: string;
-}> = {
-  "melhor-internet-petropolis-rj-2026": {
-    titulo: "Melhor internet em Petrópolis RJ 2026",
-    descricao: "Compare os melhores provedores de internet disponíveis em Petrópolis. Fibra, satélite e rádio — guia técnico atualizado.",
-    tempo: "5 min",
-    tag: "Cidade",
-    tagColor: "blue",
-    conteudo: `Petrópolis é uma das cidades serranas do Rio de Janeiro com maior crescimento no acesso à internet de alta velocidade. Em 2026, moradores e empresas têm mais opções do que nunca — mas nem todas entregam o que prometem.
+// ANIMAÇÃO DO MAPA
+function CityAnimation({ cidade }: { cidade: string }) {
+  return (
+    <div className="relative w-64 h-48 mx-auto">
 
-## Provedores disponíveis em Petrópolis
+      {/* MAPA ESTILIZADO */}
+      <div className="absolute inset-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+        {/* GRID */}
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="absolute w-full h-px bg-white/5" style={{ top: `${i * 20}%` }} />
+        ))}
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="absolute h-full w-px bg-white/5" style={{ left: `${i * 20}%` }} />
+        ))}
 
-### Claro Fibra
-A Claro é a operadora com maior cobertura em Petrópolis, atendendo principalmente o centro e bairros como Quitandinha, Valparaíso e Alto da Serra. Oferece planos a partir de R$99,90/mês com velocidades de até 600 Mbps.
+        {/* PONTOS DE COBERTURA */}
+        {[
+          { x: "30%", y: "40%", size: 40, delay: 0 },
+          { x: "60%", y: "30%", size: 30, delay: 0.3 },
+          { x: "50%", y: "65%", size: 35, delay: 0.6 },
+          { x: "20%", y: "60%", size: 25, delay: 0.9 },
+        ].map((p, i) => (
+          <motion.div
+            key={i}
+            className="absolute rounded-full bg-blue-500/10 border border-blue-400/20"
+            style={{ left: p.x, top: p.y, width: p.size, height: p.size, transform: "translate(-50%, -50%)" }}
+            animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.8, 0.4] }}
+            transition={{ duration: 2.5, repeat: Infinity, delay: p.delay }}
+          />
+        ))}
 
-**Pontos positivos:** cobertura ampla, velocidade estável, instalação grátis.
-**Pontos negativos:** fidelidade de 12 meses, suporte demorado.
+        {/* PIN PRINCIPAL */}
+        <motion.div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          animate={{ y: [0, -6, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+        >
+          <div className="w-8 h-8 bg-blue-600 rounded-full border-2 border-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <MapPin className="w-4 h-4 text-white" />
+          </div>
+          <div className="w-2 h-2 bg-blue-600 rounded-full mx-auto -mt-1" />
+        </motion.div>
+      </div>
 
-### Vivo Fibra
-A Vivo atende partes do centro e região do Carangola. Planos a partir de R$109,99/mês com até 500 Mbps. Melhor avaliação de satisfação entre os clientes da cidade.
+      {/* BADGE COBERTURA */}
+      <motion.div
+        className="absolute -top-3 -right-3 bg-green-500/20 border border-green-500/30 rounded-xl px-2 py-1"
+        animate={{ opacity: [0.6, 1, 0.6] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <span className="text-green-400 text-xs font-mono font-bold">✓ Online</span>
+      </motion.div>
+    </div>
+  );
+}
 
-### Starlink
-Para quem mora em condomínios de altitude, zona rural de Petrópolis ou regiões sem cobertura de fibra — o Starlink é a melhor opção disponível. Velocidade média de 100–200 Mbps com latência de 20–40ms.
+async function getProvedores(slugCidade: string) {
+  const { data, error } = await supabase
+    .from("provedor_cidades")
+    .select(`
+      provedor_id,
+      cidade,
+      estado,
+      provedores (
+        id, nome, tecnologia, velocidade_max,
+        preco_min, latencia, franquia, contrato,
+        instalacao, avaliacao, destaque
+      )
+    `)
+    .eq("slug_cidade", slugCidade);
 
-**Custo:** R$236/mês + kit de R$999 a R$1.680.
+  if (error || !data) return [];
+  return data.map((d: any) => d.provedores).filter(Boolean);
+}
 
-## Qual escolher em Petrópolis?
+function formatarCidade(cidade: string) {
+  return cidade
+    .replace(/-rj|-sp|-mg|-rs|-ba|-pr|-sc|-go|-df|-es/g, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
+}
 
-- **Centro e bairros urbanos:** Claro Fibra ou Vivo Fibra
-- **Regiões serranas e rurais:** Starlink
-- **Melhor custo-benefício:** Claro Fibra 300 Mbps
+export default function CidadePage({ params }: { params: Promise<{ cidade: string }> }) {
+  const { cidade } = use(params);
+  const cidadeFormatada = formatarCidade(cidade);
 
-## Teste sua internet agora
+  const [provedores, setProvedores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-Antes de contratar, acesse fast.com ou speedtest.net e teste a velocidade atual. Se estiver abaixo do contratado, você tem direito a rescisão sem multa.`,
-  },
+  useEffect(() => {
+    getProvedores(cidade).then((data) => {
+      setProvedores(data);
+      setLoading(false);
+    });
+  }, [cidade]);
 
-  "starlink-vale-a-pena-rio-de-janeiro": {
-    titulo: "Starlink vale a pena no Rio de Janeiro?",
-    descricao: "Análise técnica completa do Starlink no RJ. Velocidade real, latência, cobertura e comparativo com fibra óptica.",
-    tempo: "7 min",
-    tag: "Satélite",
-    tagColor: "purple",
-    conteudo: `O Starlink chegou ao Brasil prometendo revolucionar o acesso à internet em áreas remotas. Mas vale a pena no Rio de Janeiro, onde já existe cobertura de fibra óptica em boa parte do estado?
-
-## O que é o Starlink?
-
-O Starlink é o serviço de internet via satélite de órbita baixa (LEO) da SpaceX. Diferente dos satélites convencionais que ficam a 35.000 km de altitude, os satélites Starlink orbitam a 550 km — o que reduz drasticamente a latência.
-
-## Velocidade real no RJ
-
-Nos testes realizados em diferentes regiões do Rio de Janeiro, o Starlink entrega:
-
-- **Velocidade de download:** 80–200 Mbps
-- **Velocidade de upload:** 10–20 Mbps
-- **Latência:** 20–40ms
-- **Estabilidade:** cai em chuvas fortes por 2–5 minutos
-
-## Quando o Starlink vale a pena no RJ?
-
-**Vale a pena se você:**
-- Mora em zona rural, condomínio de altitude ou área sem fibra
-- Precisa de internet em sítio, fazenda ou chácara
-- Quer backup de conexão para home office crítico
-
-**Não vale a pena se você:**
-- Mora em área urbana com fibra disponível
-- Tem orçamento limitado
-- Usa muito streaming em 4K
-
-## Veredicto técnico
-
-Como técnico de telecom que trabalha no campo, minha análise é direta: o Starlink é a melhor solução para quem não tem fibra. Para quem tem fibra disponível, só faz sentido como backup.`,
-  },
-
-  "internet-rural-interior-rj": {
-    titulo: "Internet rural no interior do RJ: qual escolher em 2026",
-    descricao: "Guia completo para escolher internet no interior do Rio de Janeiro. Starlink, 4G rural e satélite comparados por um técnico de campo.",
-    tempo: "6 min",
-    tag: "Rural",
-    tagColor: "green",
-    conteudo: `Quem mora no interior fluminense sabe a dificuldade: a fibra óptica não chega, o 4G é instável e o satélite convencional tem latência de 600ms. Em 2026, as opções melhoraram — mas ainda exigem atenção na hora de escolher.
-
-## Opções disponíveis no interior do RJ
-
-### 1. Starlink (Recomendado)
-Melhor opção para a grande maioria das cidades do interior fluminense. Cobre desde o Vale do Paraíba até o Norte Fluminense com velocidade consistente.
-
-### 2. Internet 4G Rural
-Se sua propriedade tem cobertura de sinal 4G de pelo menos 2 barras, um roteador rural com antena direcional pode entregar 20–80 Mbps por R$100–150/mês.
-
-### 3. Provedores Regionais
-Muitas cidades do interior têm provedores locais que usam rádio ou fibra própria. Geralmente mais baratos que as grandes operadoras e com suporte mais ágil.
-
-### 4. Satélite Convencional (Evite)
-Latência de 600ms+. Inviável para videochamadas, jogos e qualquer uso moderno.
-
-## Recomendação por região
-
-- **Serrana (Petrópolis, Teresópolis):** Starlink ou fibra local
-- **Norte Fluminense (Campos, Macaé):** Starlink ou 4G rural
-- **Costa Verde (Angra, Paraty):** Starlink
-
-## Dica de técnico
-
-Antes de contratar qualquer serviço de rádio ou 4G rural, peça um teste de 7 dias. Qualquer provedor sério oferece isso.`,
-  },
-
-  "claro-vs-vivo-fibra-rj": {
-    titulo: "Claro vs Vivo Fibra: qual é melhor no RJ em 2026",
-    descricao: "Comparativo técnico entre Claro Fibra e Vivo Fibra no Rio de Janeiro. Velocidade, estabilidade, preço e suporte analisados.",
-    tempo: "5 min",
-    tag: "Comparativo",
-    tagColor: "orange",
-    conteudo: `Claro e Vivo são as duas maiores operadoras de fibra óptica do Rio de Janeiro. Mas qual entrega mais pelo seu dinheiro em 2026?
-
-## Cobertura no RJ
-
-**Claro Fibra** tem a maior cobertura do estado, atendendo praticamente todas as cidades da Região Metropolitana, Baixada Fluminense, Serrana e parte do interior.
-
-**Vivo Fibra** tem cobertura menor, focada principalmente na capital, Niterói e algumas cidades da Região Metropolitana.
-
-**Vantagem: Claro**
-
-## Velocidade e estabilidade
-
-Nos testes realizados em campo, a Vivo apresenta velocidade mais consistente durante horários de pico (19h–22h), enquanto a Claro tende a cair mais em bairros de alta densidade.
-
-**Vantagem: Vivo**
-
-## Preço
-
-- **300 Mbps:** Claro R$89,99 vs Vivo R$99,99
-- **500 Mbps:** Claro R$99,90 vs Vivo R$109,99
-- **1 Gbps:** Claro R$129,99 vs Vivo R$139,99
-
-**Vantagem: Claro**
-
-## Veredicto final
-
-- **Escolha a Claro** se preço e cobertura são prioridade
-- **Escolha a Vivo** se estabilidade no horário de pico é essencial`,
-  },
-
-  "como-testar-velocidade-real-internet": {
-    titulo: "Como testar a velocidade real da sua internet",
-    descricao: "Guia técnico para medir a velocidade real da internet. Aprenda a identificar se seu provedor está entregando o que prometeu.",
-    tempo: "4 min",
-    tag: "Dica técnica",
-    tagColor: "cyan",
-    conteudo: `Seu provedor promete 300 Mbps mas você sente a internet lenta? Aprenda a testar a velocidade real e saber se está sendo enganado.
-
-## Por que o teste de velocidade pode mentir
-
-A maioria das pessoas faz o teste errado e aceita um resultado abaixo do contratado sem questionar. Fatores que distorcem o resultado:
-
-- **Wi-Fi lento:** o gargalo pode estar no roteador, não no provedor
-- **Hora do teste:** fazer às 21h no horário de pico dá resultado diferente das 10h
-- **Servidor do teste:** alguns provedores priorizam tráfego para servidores de teste
-
-## Como fazer o teste correto
-
-### Passo 1 — Conecte no cabo
-Use um cabo de rede diretamente no roteador. Wi-Fi sempre perde velocidade.
-
-### Passo 2 — Feche tudo
-Feche todos os programas, apps e outros dispositivos conectados à rede.
-
-### Passo 3 — Use os sites certos
-- **fast.com** (Netflix) — mais difícil de o provedor trapacear
-- **speedtest.net** — o mais conhecido
-- **brasilbandalarga.com.br** — teste oficial do Anatel
-
-### Passo 4 — Teste 3 vezes em horários diferentes
-- Manhã (9h–11h), Tarde (15h–17h), Noite (20h–22h)
-
-## O que fazer se a velocidade estiver abaixo
-
-Se a média ficou abaixo de 80% do contratado, você tem direito por lei a:
-
-1. Solicitar reparo sem custo
-2. Abater proporcional na fatura
-3. Rescindir o contrato sem multa
-
-**Guarde os prints dos testes** — eles são prova para reclamação no Anatel.`,
-  },
-};
-
-const tagColors: Record<string, string> = {
-  blue: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  purple: "bg-purple-500/10 text-purple-400 border-purple-500/20",
-  green: "bg-green-500/10 text-green-400 border-green-500/20",
-  orange: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  cyan: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
-};
-
-export default function ArtigoPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  const artigo = artigos[slug];
-
-  if (!artigo) notFound();
-
-  const paragrafos = artigo.conteudo.trim().split("\n");
+  const velocidadeMax = provedores.length > 0 ? Math.max(...provedores.map((p) => p.velocidade_max)) : 0;
+  const precoMin = provedores.length > 0 ? Math.min(...provedores.map((p) => p.preco_min)) : 0;
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-[#1c1c24] text-white pt-24 pb-16">
 
-        {/* HERO DO ARTIGO */}
-        <section className="relative px-6 py-12 border-b border-white/10 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-purple-900/10 pointer-events-none" />
+        {/* HERO */}
+        <section className="relative px-6 py-16 border-b border-white/10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-cyan-900/10 pointer-events-none" />
 
           {/* PARTÍCULAS */}
-          {[...Array(10)].map((_, i) => (
+          {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-1 h-1 bg-blue-400/20 rounded-full"
               style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
-              animate={{ opacity: [0.1, 0.6, 0.1] }}
+              animate={{ opacity: [0.1, 0.7, 0.1] }}
               transition={{ duration: 3 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 2 }}
             />
           ))}
 
-          <div className="max-w-3xl mx-auto relative z-10">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
 
-            {/* BREADCRUMB */}
-            <div className="flex items-center gap-2 text-white/30 text-sm mb-6 flex-wrap">
-              <Link href="/" className="hover:text-white transition">Início</Link>
-              <ChevronRight className="w-3 h-3" />
-              <Link href="/guias" className="hover:text-white transition">Guias</Link>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-white/60 truncate">{artigo.titulo}</span>
-            </div>
+            {/* TEXTO */}
+            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
 
-            {/* TAG */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 mb-4 flex-wrap"
-            >
-              <span className={`text-xs px-2 py-0.5 rounded-full border ${tagColors[artigo.tagColor]}`}>
-                {artigo.tag}
-              </span>
-              <span className="flex items-center gap-1 text-white/30 text-xs">
-                <Clock className="w-3 h-3" /> {artigo.tempo} de leitura
-              </span>
+              {/* BREADCRUMB */}
+              <div className="flex items-center gap-2 text-white/30 text-xs mb-6 flex-wrap">
+                <Link href="/" className="hover:text-white transition">Início</Link>
+                <ChevronRight className="w-3 h-3" />
+                <span>Internet em</span>
+                <ChevronRight className="w-3 h-3" />
+                <span className="text-white/60">{cidadeFormatada}</span>
+              </div>
+
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono px-3 py-1.5 rounded-full mb-6 uppercase tracking-widest">
+                <MapPin className="w-3 h-3" />
+                Comparador técnico independente
+              </div>
+
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+                Internet em<br />
+                <span className="text-blue-400">{cidadeFormatada}</span>
+              </h1>
+
+              <p className="text-white/50 text-lg mb-8">
+                {loading ? "Carregando provedores..." : provedores.length > 0
+                  ? `${provedores.length} provedores disponíveis — compare e escolha o melhor.`
+                  : "Cidade ainda não mapeada na nossa base."}
+              </p>
+
+              {/* STATS */}
+              {!loading && provedores.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex gap-4 flex-wrap"
+                >
+                  {[
+                    { valor: provedores.length.toString(), label: "Provedores" },
+                    { valor: `${velocidadeMax}Mb`, label: "Vel. máxima" },
+                    { valor: `R$${precoMin.toFixed(0)}`, label: "A partir de" },
+                  ].map((s, i) => (
+                    <div key={i} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center min-w-20">
+                      <div className="text-lg font-bold text-blue-400">{s.valor}</div>
+                      <div className="text-white/40 text-xs mt-0.5">{s.label}</div>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
             </motion.div>
 
-            {/* TÍTULO */}
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-3xl md:text-4xl font-bold mb-4 leading-tight"
-            >
-              {artigo.titulo}
-            </motion.h1>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="text-white/50 text-lg mb-6"
-            >
-              {artigo.descricao}
-            </motion.p>
-
+            {/* ANIMAÇÃO */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="flex items-center gap-4 text-white/30 text-sm"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1, delay: 0.3 }}
             >
-              <span className="flex items-center gap-1">
-                <User className="w-4 h-4" /> Raphael Robles · Técnico de Telecom
-              </span>
-              <span className="flex items-center gap-1">
-                <BookOpen className="w-4 h-4" /> {artigo.tempo} de leitura
-              </span>
+              <CityAnimation cidade={cidadeFormatada} />
             </motion.div>
           </div>
         </section>
 
-        {/* CONTEÚDO */}
+        {/* PROVEDORES */}
         <section className="px-6 py-12">
-          <div className="max-w-3xl mx-auto">
-            <motion.article
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              {paragrafos.map((linha, i) => {
-                if (linha.startsWith("## ")) {
-                  return (
-                    <h2 key={i} className="text-xl font-bold text-white mt-10 mb-4 pb-2 border-b border-white/10 flex items-center gap-2">
-                      <span className="w-1 h-6 bg-blue-400 rounded-full flex-shrink-0" />
-                      {linha.replace("## ", "")}
-                    </h2>
-                  );
-                }
-                if (linha.startsWith("### ")) {
-                  return <h3 key={i} className="text-lg font-bold text-blue-400 mt-6 mb-3">{linha.replace("### ", "")}</h3>;
-                }
-                if (linha.startsWith("**") && linha.endsWith("**")) {
-                  return <p key={i} className="font-bold text-white mt-4">{linha.replace(/\*\*/g, "")}</p>;
-                }
-                if (linha.startsWith("- ")) {
-                  return (
-                    <li key={i} className="text-white/70 ml-4 my-1.5 list-none flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0" />
-                      {linha.replace("- ", "")}
-                    </li>
-                  );
-                }
-                if (linha.trim() === "") return <div key={i} className="my-3" />;
-                return <p key={i} className="text-white/70 leading-relaxed my-3">{linha}</p>;
-              })}
-            </motion.article>
+          <div className="max-w-4xl mx-auto">
+            <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-8">
+              Provedores disponíveis em {cidadeFormatada}
+            </p>
 
-            {/* CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              className="mt-12 bg-gradient-to-r from-blue-900/30 to-blue-800/10 border border-blue-500/20 rounded-2xl p-6 text-center"
-            >
-              <h3 className="font-bold text-lg mb-2">Compare provedores na sua cidade</h3>
-              <p className="text-white/50 text-sm mb-4">Veja qual internet está disponível no seu endereço agora.</p>
-              <Link href="/" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-6 py-3 rounded-xl text-sm">
-                Buscar provedores <ArrowRight className="w-4 h-4" />
-              </Link>
-            </motion.div>
+            {loading ? (
+              <div className="flex flex-col gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 animate-pulse">
+                    <div className="h-5 bg-white/10 rounded w-1/3 mb-3" />
+                    <div className="h-3 bg-white/5 rounded w-1/4" />
+                  </div>
+                ))}
+              </div>
+            ) : provedores.length === 0 ? (
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-12 text-center">
+                <Wifi className="text-white/20 w-12 h-12 mx-auto mb-4" />
+                <h3 className="font-bold text-lg mb-2">Cidade não mapeada ainda</h3>
+                <p className="text-white/40 text-sm max-w-sm mx-auto mb-6">
+                  Ainda não temos dados para essa cidade. Estamos expandindo nossa cobertura.
+                </p>
+                <Link href="/" className="inline-block bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-6 py-3 rounded-xl text-sm">
+                  Buscar outra cidade
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {provedores.map((p: any, i: number) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08 }}
+                    className={`rounded-2xl border p-6 transition-all ${
+                      i === 0
+                        ? "bg-blue-500/5 border-blue-500/30"
+                        : "bg-white/5 border-white/10 hover:border-blue-500/20"
+                    }`}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
 
-            {/* OUTROS GUIAS */}
-            <div className="mt-10">
-              <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-4">
-                Mais guias técnicos
-              </p>
-              <Link
-                href="/guias"
-                className="group bg-white/5 hover:bg-blue-500/5 border border-white/10 hover:border-blue-500/30 rounded-2xl p-5 transition-all flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <BookOpen className="text-blue-400 w-5 h-5" />
-                  <span className="text-white/70 group-hover:text-white transition text-sm">
-                    Ver todos os guias técnicos
-                  </span>
-                </div>
-                <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-blue-400 transition" />
-              </Link>
-            </div>
+                      {/* RANKING */}
+                      <div className="text-4xl font-bold text-white/5 w-10 flex-shrink-0 hidden md:block">
+                        {String(i + 1).padStart(2, "0")}
+                      </div>
+
+                      {/* INFO */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <h3 className="font-bold text-lg">{p.nome}</h3>
+                          {p.destaque && (
+                            <span className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-500/20">
+                              {p.destaque}
+                            </span>
+                          )}
+                          {i === 0 && (
+                            <span className="bg-yellow-500/10 text-yellow-400 text-xs px-2 py-0.5 rounded-full border border-yellow-500/20">
+                              ⭐ Melhor opção
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-4 text-sm text-white/50">
+                          <span className="flex items-center gap-1">
+                            {p.tecnologia === "Satélite"
+                              ? <Satellite className="w-3 h-3 text-blue-400" />
+                              : <Zap className="w-3 h-3 text-blue-400" />
+                            }
+                            {p.tecnologia}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-blue-400" />
+                            {p.velocidade_max} Mbps
+                          </span>
+                          {p.avaliacao > 0 && (
+                            <span className="flex items-center gap-1">
+                              <Star className="w-3 h-3 text-yellow-400" />
+                              {p.avaliacao}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* PREÇO + CTA */}
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="font-bold text-xl flex items-center gap-1">
+                            <DollarSign className="w-4 h-4 text-blue-400" />
+                            R$ {p.preco_min.toFixed(2)}
+                          </div>
+                          <div className="text-white/30 text-xs">por mês</div>
+                        </div>
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          className="bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
+                        >
+                          <Phone className="w-4 h-4" />
+                          Contratar
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="px-6 pb-8">
+          <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-900/30 to-cyan-900/20 border border-blue-500/20 rounded-2xl p-8 text-center">
+            <Wifi className="text-blue-400 w-10 h-10 mx-auto mb-4" />
+            <h3 className="font-bold text-xl mb-2">Quer comparar outras cidades?</h3>
+            <p className="text-white/50 text-sm mb-6">
+              Busque qualquer cidade do Rio de Janeiro e veja todos os provedores disponíveis.
+            </p>
+            <Link href="/" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-8 py-3 rounded-xl text-sm">
+              Buscar outra cidade <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </section>
 
