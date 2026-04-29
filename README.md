@@ -1,9 +1,9 @@
 export const metadata = {
-  title: "Starlink no Brasil 2026",
-  description: "Tudo sobre o Starlink no Brasil. Preço, velocidade, instalação e comparativo com fibra óptica.",
+  title: "Fibra Óptica: guia técnico 2026",
+  description: "Entenda como funciona a fibra óptica, compare provedores e escolha o melhor plano na sua cidade.",
 };
 
-export default function StarlinkLayout({
+export default function FibraOpticaLayout({
   children,
 }: {
   children: React.ReactNode;
