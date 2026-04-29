@@ -1,104 +1,90 @@
 INSERT INTO artigos (slug, titulo, descricao, conteudo, tag, tag_color, emoji, tempo)
 VALUES (
-  'o-que-e-fibra-optica-como-funciona',
-  'O que é fibra óptica e como ela funciona?',
-  'Entenda de forma simples como a fibra óptica transmite dados usando luz, por que ela é superior ao cabo coaxial e como isso afeta sua internet no dia a dia.',
-  'Se você já ouviu falar em "internet de fibra" mas nunca entendeu direito o que isso significa — este guia é para você. Vamos explicar do jeito certo, sem complicar.
+  'wifi-lento-o-que-fazer',
+  'Wi-Fi lento? 10 causas e como resolver cada uma',
+  'Guia completo para diagnosticar e resolver problemas de Wi-Fi lento em casa ou no trabalho. Do roteador até a operadora — descubra onde está o problema.',
+  'Wi-Fi lento é uma das reclamações mais comuns no Brasil. Mas antes de ligar para a operadora ou trocar de plano, saiba que na maioria dos casos o problema está dentro da sua própria casa — e tem solução simples.
 
-## O que é fibra óptica?
+## Como descobrir se o problema é da operadora ou da sua rede?
 
-Fibra óptica é um tipo de cabo feito de fios de vidro ou plástico ultrafinos — tão finos quanto um fio de cabelo humano. Ao contrário dos cabos de cobre tradicionais, que transmitem dados através de sinais elétricos, a fibra óptica transmite dados usando pulsos de luz.
+Primeiro passo: conecte um cabo de rede diretamente no roteador e faça um teste de velocidade no fast.com ou speedtest.net.
 
-Isso muda tudo. A luz viaja muito mais rápido do que eletricidade em um fio, e praticamente não sofre perda de sinal ao longo da distância.
+- **Velocidade boa no cabo, ruim no Wi-Fi:** o problema é na sua rede interna
+- **Velocidade ruim no cabo também:** o problema pode ser da operadora
 
-## Como a fibra óptica funciona na prática?
+Com isso você já sabe por onde começar.
 
-Imagine que você quer enviar uma mensagem para um amigo. Com a fibra óptica, o processo funciona assim:
+## Causa 1 — Roteador em posição ruim
 
-### 1. Conversão do sinal
-Seu roteador converte os dados digitais (zeros e uns) em pulsos de luz usando um laser ou LED.
+O sinal Wi-Fi se propaga em todas as direções a partir do roteador. Se ele está no canto da casa, metade do sinal vai para a parede ou para fora.
 
-### 2. Viagem pela fibra
-Esses pulsos de luz viajam pelo cabo de fibra óptica usando um fenômeno chamado reflexão interna total — basicamente, a luz fica "presa" dentro do fio e viaja sem escapar pelas laterais.
+**Solução:** Coloque o roteador no centro da casa, em posição elevada (cima de uma prateleira, por exemplo), longe do chão e de paredes grossas.
 
-### 3. Chegada e reconversão
-No outro lado, um receptor converte a luz de volta em sinais elétricos que seu computador, celular ou TV consegue entender.
+## Causa 2 — Interferência de outros aparelhos
 
-Todo esse processo acontece em milissegundos — mais rápido do que você pisca os olhos.
+Micro-ondas, telefones sem fio, babás eletrônicas e até lâmpadas LED baratas emitem sinais na mesma frequência do Wi-Fi (2.4 GHz) e causam interferência.
 
-## Por que a fibra é melhor que o cabo coaxial?
+**Solução:** Use a frequência 5 GHz do seu roteador para dispositivos próximos. O 5 GHz é mais rápido e menos congestionado, mas tem alcance menor.
 
-O cabo coaxial (aquele cabo grosso que antigamente levava sinal de TV e internet) usa sinais elétricos. Isso cria alguns problemas:
+## Causa 3 — Muitos dispositivos conectados
 
-- **Interferência eletromagnética:** aparelhos elétricos próximos podem atrapalhar o sinal
-- **Degradação com distância:** quanto mais longe da central, pior o sinal
-- **Velocidade limitada:** fisicamente não consegue transmitir dados tão rápido quanto a luz
-- **Instabilidade na chuva:** umidade afeta o desempenho
+Cada dispositivo conectado consome uma fatia da sua banda. Câmeras de segurança, TVs em standby, geladeiras inteligentes — tudo isso consome sem você perceber.
 
-A fibra óptica resolve todos esses problemas de uma vez.
+**Solução:** Acesse o painel do roteador (normalmente em 192.168.0.1 ou 192.168.1.1 no navegador) e veja quantos dispositivos estão conectados. Desconecte os que não estão em uso.
 
-## Quais são os tipos de fibra óptica?
+## Causa 4 — Canal Wi-Fi congestionado
 
-Existem dois tipos principais que você pode encontrar no mercado brasileiro:
+Se você mora em apartamento, provavelmente tem dezenas de redes Wi-Fi vizinhas usando o mesmo canal. Isso cria congestionamento e lentidão para todos.
 
-### FTTH (Fiber to the Home)
-A fibra chega diretamente até dentro da sua casa. É o tipo mais moderno e oferece a melhor velocidade e estabilidade. Quando o técnico instala um equipamento chamado ONT ou ONU dentro da sua casa, você tem FTTH.
+**Solução:** Use um aplicativo como o Wi-Fi Analyzer (Android) para ver quais canais os vizinhos usam. Configure seu roteador para usar o canal menos ocupado — geralmente os canais 1, 6 ou 11 no 2.4 GHz.
 
-### FTTB (Fiber to the Building)
-A fibra chega até o prédio ou condomínio, e de lá até o apartamento vai por cabo ethernet. Ainda assim, é muito melhor que o cabo coaxial.
+## Causa 5 — Roteador antigo ou de má qualidade
 
-## O que é latência e por que a fibra tem latência baixa?
+Roteadores têm vida útil. Um roteador com mais de 4–5 anos pode não suportar as velocidades dos planos atuais, mesmo que a internet da operadora esteja chegando corretamente.
 
-Latência é o tempo que um dado leva para ir do seu computador até o servidor e voltar. É medida em milissegundos (ms).
+**Solução:** Verifique as especificações do seu roteador. Se seu plano é de 300 Mbps ou mais, você precisa de um roteador que suporte pelo menos Wi-Fi 5 (802.11ac) ou Wi-Fi 6 (802.11ax).
 
-- **Cabo coaxial:** 15–30ms
-- **Fibra óptica:** 5–10ms
-- **4G:** 30–50ms
-- **Satélite convencional:** 600ms+
-- **Starlink:** 20–40ms
+## Causa 6 — Casa grande com um único roteador
 
-Para quem usa videochamadas, jogos online ou trabalha remotamente, a latência baixa da fibra faz diferença real no dia a dia.
+O sinal Wi-Fi não atravessa bem paredes grossas de concreto ou lajes. Em casas com mais de 100m² ou dois andares, um único roteador raramente cobre tudo bem.
 
-## Velocidade simétrica: o que significa?
+**Solução:** Use um sistema Mesh Wi-Fi (como TP-Link Deco, Google Nest Wi-Fi ou Eero). Esses sistemas usam múltiplos pontos de acesso que se comunicam entre si e cobrem toda a casa com sinal forte.
 
-Uma das maiores vantagens da fibra é a velocidade simétrica — upload e download na mesma velocidade.
+## Causa 7 — Cabo de rede ruim ou mal conectado
 
-No cabo coaxial, o upload (enviar dados) costuma ser muito mais lento que o download (receber dados). Por isso, em videochamadas no cabo coaxial, a outra pessoa te vê com qualidade ruim, mesmo que você esteja recebendo bem.
+Se você usa cabo de rede entre o roteador e o computador, um cabo de má qualidade ou mal encaixado pode limitar a velocidade — mesmo sem aparecer como "desconectado".
 
-Com fibra, você envia e recebe na mesma velocidade — essencial para home office, lives e videochamadas.
+**Solução:** Troque o cabo por um Cat5e ou Cat6. São baratos e fazem diferença significativa.
 
-## Quanto custa a fibra óptica no Brasil?
+## Causa 8 — Firmware do roteador desatualizado
 
-Em 2026, os preços médios no Rio de Janeiro são:
+Assim como o celular precisa de atualizações, o roteador também. Firmware desatualizado pode ter bugs que causam instabilidade e lentidão.
 
-- **300 Mbps:** R$80–R$100/mês
-- **500 Mbps:** R$100–R$120/mês
-- **1 Gbps:** R$120–R$150/mês
+**Solução:** Acesse o painel do roteador e procure por "Atualização de Firmware" ou "Firmware Update". Fabricantes como TP-Link, Intelbras e Asus liberam atualizações regularmente.
 
-O preço caiu muito nos últimos anos e hoje a fibra é acessível para a maioria das famílias brasileiras nas cidades atendidas.
+## Causa 9 — Problema na rede da operadora
 
-## Como saber se tem fibra na minha rua?
+Se você testou tudo acima e o problema persiste mesmo no cabo, pode ser da operadora. Verifique se há reclamações na sua região no site da Anatel ou em grupos de moradores.
 
-A forma mais simples é usar um comparador como o Fibrado — você digita sua cidade e vê quais provedores oferecem fibra no seu endereço. Outra opção é ligar para as operadoras da sua cidade e perguntar sobre disponibilidade no seu CEP.
+**Solução:** Abra um chamado técnico na operadora e exija prazo de reparo. Guarde os prints dos testes de velocidade — se a velocidade ficar abaixo de 80% do contratado por mais de 30% do tempo, você tem direito a desconto na fatura ou rescisão sem multa.
 
-## A fibra pode cair durante a chuva?
+## Causa 10 — Vírus ou programas consumindo banda
 
-Ao contrário do que muita gente pensa, a fibra óptica em si não é afetada pela chuva — a luz não sofre interferência de umidade. O que pode causar instabilidade são:
+Programas maliciosos ou até aplicativos legítimos (como backups em nuvem, atualizações automáticas) podem consumir toda a sua banda em segundo plano sem você perceber.
 
-- Equipamentos externos mal instalados ou sem proteção adequada
-- Cabos aéreos que podem ser danificados por ventos fortes ou quedas de árvores
-- O equipamento ONT dentro da sua casa, que precisa de estabilização de energia
+**Solução:** No Windows, abra o Gerenciador de Tarefas (Ctrl+Shift+Esc), vá na aba "Desempenho" e depois "Abrir o Monitor de Recursos". Na aba "Rede" você vê exatamente quais programas estão usando a internet.
 
-Se sua fibra cai toda vez que chove, o problema provavelmente é na instalação externa ou no cabeamento aéreo — não na tecnologia em si. Vale chamar o técnico para verificar.
+## Resumo rápido para resolver Wi-Fi lento
 
-## Vale a pena trocar para fibra óptica?
+1. Teste no cabo primeiro para isolar o problema
+2. Reinicie o roteador (desliga, espera 30 segundos, liga)
+3. Mova o roteador para o centro da casa
+4. Use o 5 GHz para dispositivos próximos
+5. Verifique quantos dispositivos estão conectados
+6. Mude o canal do Wi-Fi
+7. Atualize o firmware do roteador
+8. Se nada resolver, abra chamado na operadora com prints dos testes
 
-Se você ainda usa cabo coaxial ou ADSL (linha telefônica), a resposta é sim, sem dúvida. A diferença de velocidade, estabilidade e latência é enorme — e hoje os preços estão praticamente iguais ou até menores.
-
-Se você já tem fibra e está pensando em aumentar o plano, vale a pena se você:
-- Tem mais de 3 pessoas usando a internet ao mesmo tempo
-- Trabalha em home office com videoconferências frequentes
-- Faz streaming em 4K ou joga online
-- Tem muitos dispositivos conectados simultaneamente',
-  'Tecnologia', 'blue', '💡', '8 min'
+Na maioria dos casos, os passos 1 a 4 já resolvem o problema.',
+  'Dica técnica', 'cyan', '📶', '9 min'
 );
