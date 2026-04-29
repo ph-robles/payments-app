@@ -2,119 +2,100 @@
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Zap, Satellite, Star, CheckCircle, XCircle, ArrowRight, BarChart2 } from "lucide-react";
+import { Satellite, CheckCircle, XCircle, ArrowRight, Globe, Zap, Shield, Signal } from "lucide-react";
 
-const planos = [
-  {
-    id: "claro",
-    nome: "Claro Fibra",
-    tipo: "Fibra Óptica",
-    velocidade: 600,
-    latencia: "5ms",
-    preco: 99.90,
-    avaliacao: 4.2,
-    franquia: "Ilimitado",
-    contrato: "12 meses",
-    instalacao: "Grátis",
-    pros: ["Maior cobertura urbana", "Velocidade estável", "Instalação grátis"],
-    contras: ["Fidelidade obrigatória", "Suporte lento"],
-  },
-  {
-    id: "vivo",
-    nome: "Vivo Fibra",
-    tipo: "Fibra Óptica",
-    velocidade: 500,
-    latencia: "5ms",
-    preco: 109.99,
-    avaliacao: 4.4,
-    franquia: "Ilimitado",
-    contrato: "12 meses",
-    instalacao: "Grátis",
-    pros: ["Melhor avaliação de usuários", "App completo", "Boa estabilidade"],
-    contras: ["Preço mais alto", "Cobertura menor que Claro"],
-  },
-  {
-    id: "tim",
-    nome: "TIM Live",
-    tipo: "Fibra Óptica",
-    velocidade: 400,
-    latencia: "8ms",
-    preco: 89.99,
-    avaliacao: 3.9,
-    franquia: "Ilimitado",
-    contrato: "12 meses",
-    instalacao: "Grátis",
-    pros: ["Preço mais baixo", "Sem taxa de adesão"],
-    contras: ["Cobertura limitada", "Suporte fraco"],
-  },
-  {
-    id: "starlink",
-    nome: "Starlink",
-    tipo: "Satélite",
-    velocidade: 150,
-    latencia: "25ms",
-    preco: 236,
-    avaliacao: 4.6,
-    franquia: "Ilimitado",
-    contrato: "Sem fidelidade",
-    instalacao: "Kit R$ 999",
-    pros: ["Funciona em qualquer lugar", "Sem fidelidade", "Melhor para rural"],
-    contras: ["Mensalidade cara", "Kit inicial caro"],
-  },
-];
-
-// ANIMAÇÃO DE BARRAS
-function BarAnimation() {
-  const bars = [
-    { label: "Claro", valor: 600, max: 600, cor: "bg-red-400" },
-    { label: "Vivo", valor: 500, max: 600, cor: "bg-purple-400" },
-    { label: "TIM", valor: 400, max: 600, cor: "bg-blue-400" },
-    { label: "Starlink", valor: 150, max: 600, cor: "bg-cyan-400" },
-  ];
-
+// ANIMAÇÃO ORBITAL
+function OrbitalAnimation() {
   return (
-    <div className="w-full max-w-sm mx-auto space-y-3">
-      {bars.map((b, i) => (
+    <div className="relative w-64 h-64 mx-auto">
+
+      {/* TERRA */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full bg-gradient-to-br from-blue-600/60 to-blue-900/80 border border-blue-500/30 overflow-hidden">
+        <div className="absolute top-4 left-4 w-10 h-6 rounded-full bg-green-700/50" />
+        <div className="absolute top-8 left-12 w-14 h-7 rounded-full bg-green-700/40" />
+        <div className="absolute top-3 right-4 w-6 h-4 rounded-full bg-green-700/50" />
+        {/* ATMOSFERA */}
+        <div className="absolute inset-0 rounded-full bg-blue-400/10 border border-blue-400/20" />
+      </div>
+
+      {/* ÓRBITA */}
+      <motion.div
+        className="absolute top-8 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full border border-blue-400/20"
+        style={{ borderStyle: "dashed" }}
+      />
+
+      {/* SATÉLITE 1 */}
+      <motion.div
+        className="absolute"
+        style={{ top: "10%", left: "50%" }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+        transformOrigin="0 100px"
+      >
+        <div className="relative -translate-x-1/2">
+          <div className="w-6 h-4 bg-blue-500/80 rounded-sm border border-blue-400/50 relative">
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-3 h-1.5 bg-blue-300/60" />
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-3 h-1.5 bg-blue-300/60" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* SATÉLITE 2 */}
+      <motion.div
+        className="absolute"
+        style={{ top: "10%", left: "50%" }}
+        animate={{ rotate: -360 }}
+        transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
+        transformOrigin="0 80px"
+      >
+        <div className="relative -translate-x-1/2">
+          <div className="w-5 h-3 bg-cyan-500/70 rounded-sm border border-cyan-400/40 relative">
+            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-2.5 h-1 bg-cyan-300/50" />
+            <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-2.5 h-1 bg-cyan-300/50" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* ONDAS DE SINAL */}
+      {[1, 2, 3].map((i) => (
         <motion.div
           key={i}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: i * 0.15 }}
-          className="flex items-center gap-3"
-        >
-          <span className="text-white/40 text-xs w-14 text-right flex-shrink-0">{b.label}</span>
-          <div className="flex-1 h-6 bg-white/5 rounded-full overflow-hidden border border-white/10">
-            <motion.div
-              className={`h-full ${b.cor} rounded-full flex items-center justify-end pr-2`}
-              initial={{ width: 0 }}
-              animate={{ width: `${(b.valor / b.max) * 100}%` }}
-              transition={{ duration: 1.2, delay: i * 0.15, ease: "easeOut" }}
-            >
-              <span className="text-black text-xs font-bold">{b.valor}M</span>
-            </motion.div>
-          </div>
-        </motion.div>
+          className="absolute bottom-16 left-1/2 -translate-x-1/2 rounded-full border border-blue-400/15"
+          animate={{ width: [10, 80], height: [10, 80], opacity: [0.8, 0] }}
+          transition={{ duration: 2, repeat: Infinity, delay: i * 0.6 }}
+        />
       ))}
-      <p className="text-white/20 text-xs text-center mt-4">Velocidade máxima (Mbps)</p>
+
+      {/* VELOCIDADE */}
+      <motion.div
+        className="absolute top-2 right-2 bg-blue-500/20 border border-blue-500/30 rounded-lg px-2 py-1"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <span className="text-blue-400 text-xs font-mono font-bold">200Mbps</span>
+      </motion.div>
+
+      {/* LATÊNCIA */}
+      <motion.div
+        className="absolute top-2 left-2 bg-green-500/20 border border-green-500/30 rounded-lg px-2 py-1"
+        animate={{ opacity: [0.5, 1, 0.5] }}
+        transition={{ duration: 2, repeat: Infinity, delay: 1 }}
+      >
+        <span className="text-green-400 text-xs font-mono font-bold">25ms</span>
+      </motion.div>
+
     </div>
   );
 }
 
-export default function CompararPage() {
-  const [selecionados, setSelecionados] = useState<string[]>(["claro", "starlink"]);
+export const metadata = {
+  title: "Starlink no Brasil 2026",
+  description: "Tudo sobre o Starlink no Brasil. Preço, velocidade, instalação e comparativo com fibra óptica.",
+};
 
-  const toggle = (id: string) => {
-    if (selecionados.includes(id)) {
-      if (selecionados.length > 2) setSelecionados(selecionados.filter((s) => s !== id));
-    } else {
-      if (selecionados.length < 3) setSelecionados([...selecionados, id]);
-    }
-  };
-
-  const comparados = planos.filter((p) => selecionados.includes(p.id));
-
+export default function StarlinkPage() {
   return (
     <>
       <Navbar />
@@ -122,218 +103,202 @@ export default function CompararPage() {
 
         {/* HERO */}
         <section className="relative px-6 py-16 border-b border-white/10 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-cyan-900/10 pointer-events-none" />
 
-          {/* FUNDO GRADIENTE */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-purple-900/10 pointer-events-none" />
-
-          {/* PARTÍCULAS */}
-          {[...Array(15)].map((_, i) => (
+          {/* ESTRELAS */}
+          {[...Array(25)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-1 h-1 bg-blue-400/30 rounded-full"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-              }}
-              animate={{ opacity: [0.1, 0.6, 0.1], scale: [1, 1.5, 1] }}
-              transition={{
-                duration: 3 + Math.random() * 3,
-                repeat: Infinity,
-                delay: Math.random() * 2,
-              }}
+              className="absolute w-0.5 h-0.5 bg-white rounded-full"
+              style={{ top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%` }}
+              animate={{ opacity: [0.1, 0.9, 0.1] }}
+              transition={{ duration: 2 + Math.random() * 3, repeat: Infinity, delay: Math.random() * 2 }}
             />
           ))}
 
           <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
-
-            {/* TEXTO */}
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-            >
+            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
               <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono px-3 py-1.5 rounded-full mb-6 uppercase tracking-widest">
-                <BarChart2 className="w-3 h-3" />
-                Comparador técnico independente · 2026
+                <Satellite className="w-3 h-3" />
+                Guia técnico independente · 2026
               </div>
-
               <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                Compare planos<br />
-                <span className="text-blue-400">lado a lado</span>
+                Starlink no Brasil:<br />
+                <span className="text-blue-400">vale a pena</span><br />
+                em 2026?
               </h1>
-
               <p className="text-white/50 text-lg mb-8 leading-relaxed">
-                Selecione até 3 provedores e veja velocidade,
-                preço, latência e contrato lado a lado.
-                Dados técnicos reais, sem enrolação.
+                Análise técnica completa do serviço de internet via satélite da SpaceX.
+                Preço real, velocidade real e para quem realmente vale.
               </p>
-
               <div className="flex flex-wrap gap-3">
-                <a href="#comparativo" className="bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-6 py-3 rounded-xl text-sm flex items-center gap-2">
-                  Comparar agora <ArrowRight className="w-4 h-4" />
+                <a href="#planos" className="bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-6 py-3 rounded-xl text-sm flex items-center gap-2">
+                  Ver planos <ArrowRight className="w-4 h-4" />
                 </a>
+                <Link href="/internet-rural" className="bg-white/5 hover:bg-white/10 transition border border-white/10 text-white px-6 py-3 rounded-xl text-sm">
+                  Internet Rural
+                </Link>
               </div>
             </motion.div>
 
-            {/* ANIMAÇÃO DE BARRAS */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, delay: 0.3 }}
-              className="bg-white/5 border border-white/10 rounded-2xl p-8"
-            >
-              <p className="text-white/30 text-xs font-mono uppercase tracking-widest mb-6 text-center">
-                Velocidade máxima por provedor
-              </p>
-              <BarAnimation />
+            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.3 }}>
+              <OrbitalAnimation />
             </motion.div>
           </div>
         </section>
 
-        {/* SELETOR */}
-        <section id="comparativo" className="px-6 py-8 border-b border-white/10">
+        {/* STATS */}
+        <section className="px-6 py-10 border-b border-white/10">
+          <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { icon: <Signal className="w-5 h-5 text-blue-400" />, valor: "200Mbps", label: "Velocidade máxima" },
+              { icon: <Zap className="w-5 h-5 text-blue-400" />, valor: "25ms", label: "Latência média" },
+              { icon: <Globe className="w-5 h-5 text-blue-400" />, valor: "100%", label: "Cobertura no BR" },
+              { icon: <Shield className="w-5 h-5 text-blue-400" />, valor: "Sem", label: "Fidelidade" },
+            ].map((s, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center"
+              >
+                <div className="flex justify-center mb-2">{s.icon}</div>
+                <div className="text-xl font-bold text-blue-400">{s.valor}</div>
+                <div className="text-white/40 text-xs mt-1">{s.label}</div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* PLANOS */}
+        <section id="planos" className="px-6 py-12 border-b border-white/10">
           <div className="max-w-4xl mx-auto">
-            <p className="text-white/40 text-xs uppercase tracking-widest font-mono mb-4">
-              Selecione os planos ({selecionados.length}/3)
-            </p>
-            <div className="flex flex-wrap gap-3">
-              {planos.map((p) => (
-                <motion.button
-                  key={p.id}
-                  onClick={() => toggle(p.id)}
-                  whileTap={{ scale: 0.95 }}
-                  className={`px-4 py-2 rounded-full border text-sm font-medium transition-all ${
-                    selecionados.includes(p.id)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white/5 text-white/60 border-white/10 hover:border-white/30"
+            <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-8">Planos disponíveis no Brasil</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { nome: "Residencial", preco: "R$ 236/mês", kit: "R$ 1.680", velocidade: "25–200 Mbps", destaque: false },
+                { nome: "Residencial+", preco: "R$ 350/mês", kit: "R$ 1.680", velocidade: "40–220 Mbps", destaque: true },
+                { nome: "Portátil", preco: "R$ 236/mês", kit: "R$ 999", velocidade: "5–50 Mbps", destaque: false },
+              ].map((p, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={`rounded-2xl border p-6 text-center ${
+                    p.destaque
+                      ? "bg-blue-500/10 border-blue-500/30"
+                      : "bg-white/5 border-white/10"
                   }`}
                 >
-                  {p.nome}
-                </motion.button>
+                  {p.destaque && (
+                    <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-500/30 mb-3 inline-block">
+                      Mais popular
+                    </span>
+                  )}
+                  <h3 className="font-bold text-lg mb-4">{p.nome}</h3>
+                  <div className="text-3xl font-bold text-blue-400 mb-1">{p.preco}</div>
+                  <div className="text-white/40 text-sm mb-4">Kit: {p.kit}</div>
+                  <div className="text-white/60 text-sm mb-6">{p.velocidade}</div>
+                  <button className="w-full bg-blue-600 hover:bg-blue-500 transition text-white font-bold py-3 rounded-xl text-sm">
+                    Contratar
+                  </button>
+                </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* TABELA */}
-        <section className="px-6 py-12">
-          <div className="max-w-4xl mx-auto overflow-x-auto">
+        {/* PROS E CONTRAS */}
+        <section className="px-6 py-12 border-b border-white/10">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              className="bg-green-500/5 border border-green-500/20 rounded-2xl p-6"
+            >
+              <h3 className="font-bold text-lg mb-4 text-green-400">✅ Pontos positivos</h3>
+              <ul className="flex flex-col gap-3">
+                {[
+                  "Funciona em qualquer lugar do Brasil",
+                  "Baixa latência comparado a satélites convencionais",
+                  "Sem fidelidade — cancele quando quiser",
+                  "Velocidade real de 100–200 Mbps",
+                  "Ideal para home office em área rural",
+                  "Instalação simples — você mesmo pode instalar",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-white/70 text-sm">
+                    <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
 
-            {/* CABEÇALHO */}
-            <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: `160px repeat(${comparados.length}, 1fr)` }}>
-              <div />
-              {comparados.map((p) => (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              className="bg-red-500/5 border border-red-500/20 rounded-2xl p-6"
+            >
+              <h3 className="font-bold text-lg mb-4 text-red-400">❌ Pontos negativos</h3>
+              <ul className="flex flex-col gap-3">
+                {[
+                  "Mensalidade cara — R$236/mês mínimo",
+                  "Kit inicial de R$999 a R$1.680",
+                  "Sinal cai em chuvas fortes (2–5 min)",
+                  "Upload mais lento que fibra óptica",
+                  "Não indicado para gaming competitivo",
+                  "Precisa de área aberta — sem obstáculos",
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-2 text-white/70 text-sm">
+                    <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* PARA QUEM VALE */}
+        <section className="px-6 py-12 border-b border-white/10">
+          <div className="max-w-4xl mx-auto">
+            <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-8">Para quem vale a pena</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { emoji: "🏡", titulo: "Zona rural e interior", texto: "Sem dúvida a melhor opção. Se não tem fibra no seu endereço, Starlink é a escolha certa." },
+                { emoji: "🏔️", titulo: "Chácaras e sítios", texto: "Perfeito para propriedades rurais que precisam de internet estável para trabalho ou lazer." },
+                { emoji: "💼", titulo: "Home office crítico", texto: "Para quem trabalha remotamente em área rural e não pode depender de 4G instável." },
+                { emoji: "🚗", titulo: "Uso portátil", texto: "O plano portátil permite usar em trânsito — ótimo para quem viaja entre propriedades." },
+              ].map((item, i) => (
                 <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white/5 border border-white/10 rounded-2xl p-5 text-center"
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-white/5 border border-white/10 rounded-2xl p-5 flex gap-4"
                 >
-                  {p.tipo === "Satélite"
-                    ? <Satellite className="text-blue-400 w-8 h-8 mx-auto mb-2" />
-                    : <Zap className="text-blue-400 w-8 h-8 mx-auto mb-2" />
-                  }
-                  <div className="font-bold">{p.nome}</div>
-                  <div className="text-white/40 text-xs mt-1">{p.tipo}</div>
-                  <div className="flex items-center justify-center gap-1 mt-2">
-                    <Star className="w-3 h-3 text-yellow-400" />
-                    <span className="text-sm text-yellow-400">{p.avaliacao}</span>
+                  <span className="text-3xl flex-shrink-0">{item.emoji}</span>
+                  <div>
+                    <h3 className="font-bold mb-1">{item.titulo}</h3>
+                    <p className="text-white/50 text-sm">{item.texto}</p>
                   </div>
                 </motion.div>
               ))}
             </div>
-
-            {/* LINHAS */}
-            {[
-              { label: "Velocidade", render: (p: typeof planos[0]) => `${p.velocidade} Mbps` },
-              { label: "Latência", render: (p: typeof planos[0]) => p.latencia },
-              { label: "Mensalidade", render: (p: typeof planos[0]) => `R$ ${p.preco.toFixed(2)}` },
-              { label: "Franquia", render: (p: typeof planos[0]) => p.franquia },
-              { label: "Contrato", render: (p: typeof planos[0]) => p.contrato },
-              { label: "Instalação", render: (p: typeof planos[0]) => p.instalacao },
-            ].map((row, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="grid gap-4 mb-2"
-                style={{ gridTemplateColumns: `160px repeat(${comparados.length}, 1fr)` }}
-              >
-                <div className="flex items-center text-white/40 text-sm px-2">{row.label}</div>
-                {comparados.map((p) => (
-                  <div key={p.id} className="bg-white/5 border border-white/10 rounded-xl p-4 text-center text-sm font-medium">
-                    {row.render(p)}
-                  </div>
-                ))}
-              </motion.div>
-            ))}
-
-            {/* PROS */}
-            <div className="grid gap-4 mt-6" style={{ gridTemplateColumns: `160px repeat(${comparados.length}, 1fr)` }}>
-              <div className="text-white/40 text-sm px-2 pt-2">Positivos</div>
-              {comparados.map((p) => (
-                <div key={p.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <ul className="flex flex-col gap-2">
-                    {p.pros.map((pro, j) => (
-                      <li key={j} className="flex items-start gap-2 text-xs text-white/60">
-                        <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
-                        {pro}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* CONTRAS */}
-            <div className="grid gap-4 mt-2" style={{ gridTemplateColumns: `160px repeat(${comparados.length}, 1fr)` }}>
-              <div className="text-white/40 text-sm px-2 pt-2">Negativos</div>
-              {comparados.map((p) => (
-                <div key={p.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
-                  <ul className="flex flex-col gap-2">
-                    {p.contras.map((contra, j) => (
-                      <li key={j} className="flex items-start gap-2 text-xs text-white/60">
-                        <XCircle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
-                        {contra}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* CTA */}
-            <div className="grid gap-4 mt-4" style={{ gridTemplateColumns: `160px repeat(${comparados.length}, 1fr)` }}>
-              <div />
-              {comparados.map((p) => (
-                <motion.button
-                  key={p.id}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-blue-600 hover:bg-blue-500 transition text-white font-bold py-3 rounded-xl text-sm flex items-center justify-center gap-2"
-                >
-                  Contratar <ArrowRight className="w-4 h-4" />
-                </motion.button>
-              ))}
-            </div>
-
           </div>
         </section>
 
-        {/* CTA FINAL */}
-        <section className="px-6 pb-8">
-          <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-900/30 to-purple-900/20 border border-blue-500/20 rounded-2xl p-8 text-center">
-            <BarChart2 className="text-blue-400 w-10 h-10 mx-auto mb-4" />
-            <h3 className="font-bold text-xl mb-2">Quer ver provedores da sua cidade?</h3>
-            <p className="text-white/50 text-sm mb-6">
-              Compare todos os provedores disponíveis no seu endereço específico.
-            </p>
-            <a
-              href="/"
-              className="inline-block bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-8 py-3 rounded-xl text-sm"
-            >
-              Buscar na minha cidade
-            </a>
+        {/* CTA */}
+        <section className="px-6 py-8">
+          <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-900/30 to-cyan-900/20 border border-blue-500/20 rounded-2xl p-8 text-center">
+            <Satellite className="text-blue-400 w-10 h-10 mx-auto mb-4" />
+            <h3 className="font-bold text-xl mb-2">Compare internet na sua cidade</h3>
+            <p className="text-white/50 text-sm mb-6">Veja se o Starlink é realmente a melhor opção para o seu endereço.</p>
+            <Link href="/" className="inline-block bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-8 py-3 rounded-xl text-sm">
+              Buscar provedores
+            </Link>
           </div>
         </section>
 
