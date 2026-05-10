@@ -1,28 +1,28 @@
-from pydantic_settings import BaseSettings
-from functools import lru_cache
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.config import get_settings
+from app.api.v1.router import api_router
+from app.core.middleware import RateLimitMiddleware
 
-class Settings(BaseSettings):
-    # App
-    APP_NAME: str = "AI Copiloto Concursos"
-    APP_VERSION: str = "1.0.0"
-    DEBUG: bool = False
-    
-    # Supabase
-    SUPABASE_URL: str
-    SUPABASE_SERVICE_KEY: str  # Service role key (backend only)
-    SUPABASE_JWT_SECRET: str
-    
-    # OpenAI
-    OPENAI_API_KEY: str
-    OPENAI_MODEL: str = "gpt-4o"
-    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
-    
-    # Security
-    ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
-    
-    class Config:
-        env_file = ".env"
+settings = get_settings()
 
-@lru_cache()
-def get_settings() -> Settings:
-    return Settings()
+app = FastAPI(
+    title=settings.APP_NAME,
+    version=settings.APP_VERSION,
+    docs_url="/docs" if settings.DEBUG else None,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(RateLimitMiddleware)
+app.include_router(api_router, prefix="/api/v1")
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "version": settings.APP_VERSION}
