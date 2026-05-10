@@ -1,28 +1,31 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import jwt
 from app.config import get_settings
-from app.api.v1.router import api_router
-from app.core.middleware import RateLimitMiddleware
+from app.db.supabase_client import get_supabase_client
 
+security = HTTPBearer()
 settings = get_settings()
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    version=settings.APP_VERSION,
-    docs_url="/docs" if settings.DEBUG else None,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.add_middleware(RateLimitMiddleware)
-app.include_router(api_router, prefix="/api/v1")
-
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "version": settings.APP_VERSION}
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+) -> dict:
+    """Valida JWT do Supabase e retorna o usuário atual."""
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated"
+        )
+        return {"id": payload["sub"], "email": payload.get("email")}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expirado"
+        )
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido"
+        )
