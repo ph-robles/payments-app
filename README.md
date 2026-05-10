@@ -1,386 +1,361 @@
-"use client";
+-- ============================================================
+-- EXTENSÕES
+-- ============================================================
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "vector";
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { MapPin, Zap, DollarSign, Star, ArrowRight, ChevronRight, Wifi, Satellite, Phone } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { use, useEffect, useState } from "react";
+-- ============================================================
+-- TABELAS CORE
+-- ============================================================
 
-// Provedores nacionais que aparecem em qualquer cidade
-const provedoresNacionais = [
-  {
-    id: "starlink-nacional",
-    nome: "Starlink",
-    tecnologia: "Satélite",
-    velocidade_max: 200,
-    preco_min: 236.00,
-    latencia: "25ms",
-    franquia: "Ilimitado",
-    contrato: "Sem fidelidade",
-    avaliacao: 4.6,
-    destaque: "Disponível em qualquer cidade",
-    nacional: true,
-  },
-  {
-    id: "claro-nacional",
-    nome: "Claro Fibra",
-    tecnologia: "Fibra Óptica",
-    velocidade_max: 600,
-    preco_min: 99.90,
-    latencia: "5ms",
-    franquia: "Ilimitado",
-    contrato: "12 meses",
-    avaliacao: 4.2,
-    destaque: "Maior cobertura nacional",
-    nacional: true,
-  },
-  {
-    id: "vivo-nacional",
-    nome: "Vivo Fibra",
-    tecnologia: "Fibra Óptica",
-    velocidade_max: 500,
-    preco_min: 109.99,
-    latencia: "5ms",
-    franquia: "Ilimitado",
-    contrato: "12 meses",
-    avaliacao: 4.4,
-    destaque: "Melhor avaliação",
-    nacional: true,
-  },
-  {
-    id: "tim-nacional",
-    nome: "TIM Live",
-    tecnologia: "Fibra Óptica",
-    velocidade_max: 400,
-    preco_min: 89.99,
-    latencia: "8ms",
-    franquia: "Ilimitado",
-    contrato: "12 meses",
-    avaliacao: 3.9,
-    destaque: "Melhor preço",
-    nacional: true,
-  },
-];
+-- Perfis de usuário (espelha auth.users)
+CREATE TABLE profiles (
+  id            UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email         TEXT NOT NULL,
+  full_name     TEXT,
+  avatar_url    TEXT,
+  plan          TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'enterprise')),
+  study_goal_minutes_daily INT DEFAULT 120,
+  target_exam   TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-function CityAnimation() {
-  return (
-    <div className="relative w-64 h-48 mx-auto">
-      <div className="absolute inset-0 bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="absolute w-full h-px bg-white/5" style={{ top: `${i * 20}%` }} />
-        ))}
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="absolute h-full w-px bg-white/5" style={{ left: `${i * 20}%` }} />
-        ))}
-        {[
-          { x: "30%", y: "40%", size: 40, delay: 0 },
-          { x: "60%", y: "30%", size: 30, delay: 0.3 },
-          { x: "50%", y: "65%", size: 35, delay: 0.6 },
-        ].map((p, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full bg-blue-500/10 border border-blue-400/20"
-            style={{ left: p.x, top: p.y, width: p.size, height: p.size, transform: "translate(-50%, -50%)" }}
-            animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.8, 0.4] }}
-            transition={{ duration: 2.5, repeat: Infinity, delay: p.delay }}
-          />
-        ))}
-        <motion.div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-          animate={{ y: [0, -6, 0] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          <div className="w-8 h-8 bg-blue-600 rounded-full border-2 border-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <MapPin className="w-4 h-4 text-white" />
-          </div>
-          <div className="w-2 h-2 bg-blue-600 rounded-full mx-auto -mt-1" />
-        </motion.div>
-      </div>
-      <motion.div
-        className="absolute -top-3 -right-3 bg-green-500/20 border border-green-500/30 rounded-xl px-2 py-1"
-        animate={{ opacity: [0.6, 1, 0.6] }}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        <span className="text-green-400 text-xs font-mono font-bold">✓ Online</span>
-      </motion.div>
-    </div>
-  );
-}
+-- Editais de concursos
+CREATE TABLE editais (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  banca       TEXT,
+  cargo       TEXT,
+  exam_date   DATE,
+  is_active   BOOLEAN DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-async function getProvedoresLocais(slugCidade: string) {
-  const { data, error } = await supabase
-    .from("provedor_cidades")
-    .select(`
-      provedor_id, cidade, estado,
-      provedores (
-        id, nome, tecnologia, velocidade_max,
-        preco_min, latencia, franquia, contrato,
-        instalacao, avaliacao, destaque
-      )
-    `)
-    .eq("slug_cidade", slugCidade);
+-- Matérias
+CREATE TABLE materias (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  edital_id       UUID REFERENCES editais(id) ON DELETE SET NULL,
+  name            TEXT NOT NULL,
+  description     TEXT,
+  color           TEXT DEFAULT '#6366f1',
+  icon            TEXT DEFAULT 'BookOpen',
+  weight          NUMERIC(3,2) DEFAULT 1.0,  -- peso no edital
+  total_questions INT DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-  if (error || !data) return [];
-  return data.map((d: any) => ({ ...d.provedores, nacional: false })).filter(Boolean);
-}
+-- Tópicos dentro de matérias
+CREATE TABLE topicos (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  materia_id  UUID NOT NULL REFERENCES materias(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  order_index INT DEFAULT 0,
+  mastery     NUMERIC(5,2) DEFAULT 0 CHECK (mastery BETWEEN 0 AND 100),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-function formatarCidade(cidade: string) {
-  return cidade
-    .replace(/-[a-z]{2}$/, "")
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase());
-}
+-- ============================================================
+-- FLASHCARDS
+-- ============================================================
 
-function formatarEstado(cidade: string) {
-  const match = cidade.match(/-([a-z]{2})$/);
-  return match ? match[1].toUpperCase() : "BR";
-}
+CREATE TABLE flashcard_decks (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  materia_id  UUID REFERENCES materias(id) ON DELETE SET NULL,
+  topico_id   UUID REFERENCES topicos(id) ON DELETE SET NULL,
+  name        TEXT NOT NULL,
+  description TEXT,
+  is_ai_generated BOOLEAN DEFAULT FALSE,
+  card_count  INT DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-export default function CidadePage({ params }: { params: Promise<{ cidade: string }> }) {
-  const { cidade } = use(params);
-  const cidadeFormatada = formatarCidade(cidade);
-  const estado = formatarEstado(cidade);
+CREATE TABLE flashcards (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  deck_id         UUID NOT NULL REFERENCES flashcard_decks(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  front           TEXT NOT NULL,
+  back            TEXT NOT NULL,
+  hint            TEXT,
+  tags            TEXT[],
+  -- SM-2 fields
+  ease_factor     NUMERIC(4,2) DEFAULT 2.5,
+  interval        INT DEFAULT 1,           -- dias
+  repetitions     INT DEFAULT 0,
+  next_review_at  TIMESTAMPTZ DEFAULT NOW(),
+  last_review_at  TIMESTAMPTZ,
+  -- Stats
+  total_reviews   INT DEFAULT 0,
+  correct_reviews INT DEFAULT 0,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-  const [provedoresLocais, setProvedoresLocais] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+CREATE TABLE flashcard_reviews (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  flashcard_id UUID NOT NULL REFERENCES flashcards(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  quality     INT NOT NULL CHECK (quality BETWEEN 0 AND 5),  -- SM-2 quality
+  time_taken_ms INT,
+  reviewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-  useEffect(() => {
-    getProvedoresLocais(cidade).then((data) => {
-      setProvedoresLocais(data);
-      setLoading(false);
-    });
-  }, [cidade]);
+-- ============================================================
+-- QUESTÕES
+-- ============================================================
 
-  // Combina provedores locais + nacionais (sem duplicar)
-  const idsLocais = provedoresLocais.map((p) => p.nome.toLowerCase());
-  const nacionaisExtras = provedoresNacionais.filter(
-    (p) => !idsLocais.some((n) => p.nome.toLowerCase().includes(n) || n.includes(p.nome.toLowerCase().split(" ")[0]))
-  );
-  const todosProvedores = [...provedoresLocais, ...nacionaisExtras];
+CREATE TABLE questoes (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id       UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  materia_id    UUID REFERENCES materias(id) ON DELETE SET NULL,
+  topico_id     UUID REFERENCES topicos(id) ON DELETE SET NULL,
+  type          TEXT NOT NULL CHECK (type IN ('multiple_choice', 'true_false', 'essay')),
+  difficulty    TEXT NOT NULL DEFAULT 'medium' CHECK (difficulty IN ('easy', 'medium', 'hard')),
+  statement     TEXT NOT NULL,
+  options       JSONB,     -- [{id, text, is_correct}]
+  correct_answer TEXT,
+  explanation   TEXT,
+  source        TEXT,      -- 'ai_generated', 'pdf_extracted', 'manual'
+  tags          TEXT[],
+  embedding     vector(1536),  -- para busca semântica
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-  const temLocais = provedoresLocais.length > 0;
+CREATE TABLE questao_attempts (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  questao_id    UUID NOT NULL REFERENCES questoes(id) ON DELETE CASCADE,
+  user_id       UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  simulado_id   UUID,
+  user_answer   TEXT,
+  is_correct    BOOLEAN,
+  time_taken_ms INT,
+  attempted_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-  return (
-    <>
-      <Navbar />
-      <main className="min-h-screen bg-[#1c1c24] text-white pt-24 pb-16">
+-- ============================================================
+-- SIMULADOS
+-- ============================================================
 
-        {/* HERO */}
-        <section className="relative px-6 py-16 border-b border-white/10 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-transparent to-cyan-900/10 pointer-events-none" />
+CREATE TABLE simulados (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name            TEXT NOT NULL,
+  type            TEXT DEFAULT 'adaptive' CHECK (type IN ('adaptive', 'fixed', 'custom')),
+  status          TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed')),
+  total_questions INT NOT NULL,
+  time_limit_min  INT,
+  score           NUMERIC(5,2),
+  started_at      TIMESTAMPTZ,
+  finished_at     TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center relative z-10">
-            <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }}>
+CREATE TABLE simulado_questions (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  simulado_id UUID NOT NULL REFERENCES simulados(id) ON DELETE CASCADE,
+  questao_id  UUID NOT NULL REFERENCES questoes(id),
+  order_index INT NOT NULL,
+  user_answer TEXT,
+  is_correct  BOOLEAN,
+  time_taken_ms INT
+);
 
-              <div className="flex items-center gap-2 text-white/30 text-xs mb-6 flex-wrap">
-                <Link href="/" className="hover:text-white transition">Início</Link>
-                <ChevronRight className="w-3 h-3" />
-                <span>Internet em</span>
-                <ChevronRight className="w-3 h-3" />
-                <span className="text-white/60">{cidadeFormatada}</span>
-              </div>
+-- ============================================================
+-- PDFs E CONTEÚDO
+-- ============================================================
 
-              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-mono px-3 py-1.5 rounded-full mb-6 uppercase tracking-widest">
-                <MapPin className="w-3 h-3" />
-                {estado} · Comparador técnico independente
-              </div>
+CREATE TABLE pdf_uploads (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  materia_id      UUID REFERENCES materias(id) ON DELETE SET NULL,
+  filename        TEXT NOT NULL,
+  storage_path    TEXT NOT NULL,  -- Supabase Storage path
+  file_size_bytes BIGINT,
+  page_count      INT,
+  status          TEXT DEFAULT 'processing' CHECK (status IN ('processing', 'ready', 'error')),
+  extracted_text  TEXT,
+  summary         TEXT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                Internet em<br />
-                <span className="text-blue-400">{cidadeFormatada}</span>
-              </h1>
+CREATE TABLE pdf_chunks (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  pdf_id      UUID NOT NULL REFERENCES pdf_uploads(id) ON DELETE CASCADE,
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  content     TEXT NOT NULL,
+  page_number INT,
+  chunk_index INT,
+  embedding   vector(1536),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-              <p className="text-white/50 text-lg mb-8">
-                {loading
-                  ? "Buscando provedores..."
-                  : temLocais
-                    ? `${provedoresLocais.length} provedores locais + opções nacionais disponíveis.`
-                    : "Provedores nacionais disponíveis na sua cidade."}
-              </p>
+-- ============================================================
+-- SESSÕES DE ESTUDO
+-- ============================================================
 
-              {!loading && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex gap-3 flex-wrap"
-                >
-                  {[
-                    { valor: todosProvedores.length.toString(), label: "Provedores" },
-                    { valor: `${Math.max(...todosProvedores.map((p) => p.velocidade_max))}Mb`, label: "Vel. máxima" },
-                    { valor: `R$${Math.min(...todosProvedores.map((p) => p.preco_min)).toFixed(0)}`, label: "A partir de" },
-                  ].map((s, i) => (
-                    <div key={i} className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-center min-w-20">
-                      <div className="text-lg font-bold text-blue-400">{s.valor}</div>
-                      <div className="text-white/40 text-xs mt-0.5">{s.label}</div>
-                    </div>
-                  ))}
-                </motion.div>
-              )}
-            </motion.div>
+CREATE TABLE study_sessions (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  materia_id      UUID REFERENCES materias(id) ON DELETE SET NULL,
+  topico_id       UUID REFERENCES topicos(id) ON DELETE SET NULL,
+  session_type    TEXT CHECK (session_type IN ('flashcard', 'questoes', 'leitura', 'tutor', 'simulado')),
+  duration_min    INT,
+  xp_earned       INT DEFAULT 0,
+  started_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ended_at        TIMESTAMPTZ
+);
 
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, delay: 0.3 }}>
-              <CityAnimation />
-            </motion.div>
-          </div>
-        </section>
+-- ============================================================
+-- CRONOGRAMA
+-- ============================================================
 
-        {/* PROVEDORES LOCAIS */}
-        {!loading && temLocais && (
-          <section className="px-6 py-10 border-b border-white/10">
-            <div className="max-w-4xl mx-auto">
-              <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-6 flex items-center gap-2">
-                <span className="w-2 h-2 bg-green-400 rounded-full" />
-                Provedores locais em {cidadeFormatada}
-              </p>
-              <div className="flex flex-col gap-4">
-                {provedoresLocais.map((p: any, i: number) => (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                    className="bg-blue-500/5 border border-blue-500/20 rounded-2xl p-6 flex flex-col md:flex-row md:items-center gap-4"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="font-bold text-lg">{p.nome}</h3>
-                        <span className="bg-green-500/10 text-green-400 text-xs px-2 py-0.5 rounded-full border border-green-500/20">
-                          Local
-                        </span>
-                        {p.destaque && (
-                          <span className="bg-blue-500/10 text-blue-400 text-xs px-2 py-0.5 rounded-full border border-blue-500/20">
-                            {p.destaque}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-white/50">
-                        <span className="flex items-center gap-1">
-                          <Zap className="w-3 h-3 text-blue-400" />{p.tecnologia}
-                        </span>
-                        <span>{p.velocidade_max} Mbps</span>
-                        {p.avaliacao > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Star className="w-3 h-3 text-yellow-400" />{p.avaliacao}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="font-bold text-xl">R$ {p.preco_min.toFixed(2)}</div>
-                        <div className="text-white/30 text-xs">por mês</div>
-                      </div>
-                      <button className="bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2">
-                        <Phone className="w-4 h-4" /> Contratar
-                      </button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+CREATE TABLE cronogramas (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  edital_id   UUID REFERENCES editais(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  is_active   BOOLEAN DEFAULT TRUE,
+  ai_version  INT DEFAULT 1,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-        {/* PROVEDORES NACIONAIS */}
-        <section className="px-6 py-10">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-white/40 text-xs font-mono uppercase tracking-widest mb-6 flex items-center gap-2">
-              <span className="w-2 h-2 bg-blue-400 rounded-full" />
-              Disponíveis em {cidadeFormatada}
-            </p>
-            <div className="flex flex-col gap-4">
-              {loading ? (
-                [1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-6 animate-pulse">
-                    <div className="h-5 bg-white/10 rounded w-1/3 mb-3" />
-                    <div className="h-3 bg-white/5 rounded w-1/4" />
-                  </div>
-                ))
-              ) : (
-                nacionaisExtras.map((p, i) => (
-                  <motion.div
-                    key={p.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.08 }}
-                    className="bg-white/5 border border-white/10 hover:border-blue-500/20 rounded-2xl p-6 transition-all flex flex-col md:flex-row md:items-center gap-4"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="font-bold text-lg">{p.nome}</h3>
-                        {p.destaque && (
-                          <span className="bg-white/5 text-white/50 text-xs px-2 py-0.5 rounded-full border border-white/10">
-                            {p.destaque}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-4 text-sm text-white/50">
-                        <span className="flex items-center gap-1">
-                          {p.tecnologia === "Satélite"
-                            ? <Satellite className="w-3 h-3 text-blue-400" />
-                            : <Zap className="w-3 h-3 text-blue-400" />
-                          }
-                          {p.tecnologia}
-                        </span>
-                        <span>{p.velocidade_max} Mbps</span>
-                        <span className="flex items-center gap-1">
-                          <Star className="w-3 h-3 text-yellow-400" />{p.avaliacao}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <div className="font-bold text-xl flex items-center gap-1">
-                          <DollarSign className="w-4 h-4 text-blue-400" />
-                          R$ {p.preco_min.toFixed(2)}
-                        </div>
-                        <div className="text-white/30 text-xs">por mês</div>
-                      </div>
-                      <button className="bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-5 py-3 rounded-xl text-sm flex items-center gap-2">
-                        <Phone className="w-4 h-4" /> Contratar
-                      </button>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
+CREATE TABLE cronograma_items (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  cronograma_id   UUID NOT NULL REFERENCES cronogramas(id) ON DELETE CASCADE,
+  materia_id      UUID NOT NULL REFERENCES materias(id) ON DELETE CASCADE,
+  topico_id       UUID REFERENCES topicos(id) ON DELETE SET NULL,
+  scheduled_date  DATE NOT NULL,
+  duration_min    INT NOT NULL,
+  is_completed    BOOLEAN DEFAULT FALSE,
+  completed_at    TIMESTAMPTZ,
+  order_index     INT DEFAULT 0
+);
 
-        {/* AVISO CIDADE SEM DADOS LOCAIS */}
-        {!loading && !temLocais && (
-          <section className="px-6 pb-8">
-            <div className="max-w-4xl mx-auto bg-yellow-500/5 border border-yellow-500/20 rounded-2xl p-6">
-              <p className="text-yellow-400 text-sm font-medium mb-1">
-                📡 Conhece um provedor local em {cidadeFormatada}?
-              </p>
-              <p className="text-white/40 text-sm">
-                Ajude a comunidade! Entre em{" "}
-                <Link href="/contato" className="text-blue-400 hover:underline">contato</Link>
-                {" "}e indique provedores locais da sua cidade.
-              </p>
-            </div>
-          </section>
-        )}
+-- ============================================================
+-- CHAT / TUTOR IA
+-- ============================================================
 
-        {/* CTA */}
-        <section className="px-6 pb-8">
-          <div className="max-w-4xl mx-auto bg-gradient-to-r from-blue-900/30 to-cyan-900/20 border border-blue-500/20 rounded-2xl p-8 text-center">
-            <Wifi className="text-blue-400 w-10 h-10 mx-auto mb-4" />
-            <h3 className="font-bold text-xl mb-2">Quer comparar outras cidades?</h3>
-            <p className="text-white/50 text-sm mb-6">
-              Busque qualquer cidade do Brasil pelo nome ou CEP.
-            </p>
-            <Link href="/" className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 transition text-white font-bold px-8 py-3 rounded-xl text-sm">
-              Buscar outra cidade <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </section>
+CREATE TABLE chat_sessions (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  materia_id  UUID REFERENCES materias(id) ON DELETE SET NULL,
+  title       TEXT,
+  mode        TEXT DEFAULT 'tutor' CHECK (mode IN ('tutor', 'feynman', 'quiz', 'resumo')),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-      </main>
-      <Footer />
-    </>
-  );
-}
+CREATE TABLE chat_messages (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  session_id      UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  role            TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+  content         TEXT NOT NULL,
+  tokens_used     INT,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- GAMIFICAÇÃO (base para features futuras)
+-- ============================================================
+
+CREATE TABLE user_achievements (
+  id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id         UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  achievement_key TEXT NOT NULL,
+  earned_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, achievement_key)
+);
+
+CREATE TABLE daily_streaks (
+  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  streak_date DATE NOT NULL,
+  xp_earned   INT DEFAULT 0,
+  UNIQUE(user_id, streak_date)
+);
+
+-- ============================================================
+-- ÍNDICES DE PERFORMANCE
+-- ============================================================
+
+CREATE INDEX idx_flashcards_next_review ON flashcards(user_id, next_review_at);
+CREATE INDEX idx_flashcards_deck ON flashcards(deck_id);
+CREATE INDEX idx_questoes_materia ON questoes(materia_id, difficulty);
+CREATE INDEX idx_questoes_embedding ON questoes USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX idx_pdf_chunks_embedding ON pdf_chunks USING ivfflat (embedding vector_cosine_ops);
+CREATE INDEX idx_study_sessions_user_date ON study_sessions(user_id, started_at);
+CREATE INDEX idx_chat_messages_session ON chat_messages(session_id, created_at);
+CREATE INDEX idx_cronograma_items_date ON cronograma_items(cronograma_id, scheduled_date);
+
+-- ============================================================
+-- ROW LEVEL SECURITY (RLS)
+-- ============================================================
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE editais ENABLE ROW LEVEL SECURITY;
+ALTER TABLE materias ENABLE ROW LEVEL SECURITY;
+ALTER TABLE topicos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flashcard_decks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flashcards ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flashcard_reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE questoes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE questao_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE simulados ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pdf_uploads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pdf_chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE study_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cronogramas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cronograma_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
+-- Políticas RLS (padrão: usuário acessa apenas seus dados)
+DO $$
+DECLARE
+  tbl TEXT;
+  tables TEXT[] := ARRAY[
+    'profiles','editais','materias','topicos',
+    'flashcard_decks','flashcards','flashcard_reviews',
+    'questoes','questao_attempts','simulados',
+    'pdf_uploads','pdf_chunks','study_sessions',
+    'cronogramas','cronograma_items','chat_sessions','chat_messages'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY tables LOOP
+    EXECUTE format(
+      'CREATE POLICY "Users access own data" ON %I FOR ALL USING (auth.uid() = user_id)',
+      tbl
+    );
+  END LOOP;
+END $$;
+
+-- ============================================================
+-- TRIGGERS
+-- ============================================================
+
+-- Auto-criar perfil ao registrar
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO profiles (id, email, full_name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Updated_at automático
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
